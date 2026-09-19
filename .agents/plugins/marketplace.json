@@ -1,0 +1,12 @@
+{
+  "name": "sift-plugins",
+  "interface": { "displayName": "Sift" },
+  "plugins": [
+    {
+      "name": "sift-lens",
+      "source": { "source": "local", "path": "./plugins/sift-lens" },
+      "policy": { "installation": "AVAILABLE", "authentication": "NONE" },
+      "category": "Research"
+    }
+  ]
+}

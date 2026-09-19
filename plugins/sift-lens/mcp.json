@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "sift-lens": {
+      "type": "streamable-http",
+      "url": "https://sift-lens.amidonbrad.workers.dev/mcp"
+    }
+  }
+}
