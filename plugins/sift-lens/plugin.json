@@ -2,9 +2,15 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "sift-lens",
   "version": "0.1.0",
-  "description": "Sift Lens: read and question tonight's Sift equity-research board — what stands out, a company's record with its chart, what is fresh since the lock, the night waterfall and the outcome ledgers. Read-only; nothing here is a recommendation.",
-  "author": { "name": "Sift" },
-  "keywords": ["research", "equities", "sift"],
+  "description": "Sift Lens: read and question tonight's Sift equity-research board \u2014 what stands out, a company's record with its chart, what is fresh since the lock, the night waterfall and the outcome ledgers. Read-only; nothing here is a recommendation.",
+  "author": {
+    "name": "Sift"
+  },
+  "keywords": [
+    "research",
+    "equities",
+    "sift"
+  ],
   "extensions": {
     "com.openai": {
       "interface": {
@@ -13,10 +19,17 @@
         "longDescription": "The Sift pipeline freezes evidence, locks a price, has an analyst argue a thesis and an adversary attack it, then publishes Top Picks and Qualified Picks. The Lens is the private analyst layer over that board: ask what stands out, open a company's record and chart, see what landed after the lock, the night waterfall and the outcome ledgers. Read-only. Nothing is a recommendation; no order path exists.",
         "developerName": "Sift",
         "category": "Research",
-        "capabilities": ["Read"],
-        "defaultPrompt": ["What stands out on tonight's board?", "Second opinion on EOLS.", "What is fresh since the lock?"],
+        "capabilities": [
+          "Read"
+        ],
+        "defaultPrompt": [
+          "What stands out on tonight's board?",
+          "Second opinion on EOLS.",
+          "What is fresh since the lock?"
+        ],
         "brandColor": "#2bc8ea"
-      }
+      },
+      "apps": "./.app.json"
     }
   }
 }
