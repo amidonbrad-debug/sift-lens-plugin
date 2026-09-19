@@ -6,15 +6,27 @@ chat and questioned on your own account.
 
 ## Install
 
-ChatGPT desktop / Codex, from this repository:
+Two halves, both one-time, on your own accounts.
 
-    codex plugin marketplace add <owner>/<this-repo>
+**chatgpt.com (the part that renders the board in the chat).** Settings → Plugins → Developer mode
+→ on → Create: name `Sift Lens`, URL `https://sift-lens.amidonbrad.workers.dev/mcp`, no
+authentication. Then in any chat: `+` → Sift Lens → ask "What stands out on tonight's board?".
 
-Then open Plugins → Browse directory → Sift → Sift Lens → Install.
+**ChatGPT desktop / Codex (the plugin with the skill).** From this repository:
+
+    codex plugin marketplace add amidonbrad-debug/sift-lens-plugin
+
+or Plugins → Add → Add a marketplace → `https://github.com/amidonbrad-debug/sift-lens-plugin.git`,
+branch `main`, sparse paths empty. Then Browse directory → Sift → Sift Lens → Install.
 
 No token or login is needed for the read-only connector. The Lens web page
 (https://sift-lens.amidonbrad.workers.dev) asks for a personal token, which the Sift owner hands out;
 that token also keeps your saved views and notes yours.
+
+Why two halves: an MCP server becomes a ChatGPT "app" only once it is registered on chatgpt.com in
+Developer mode, and that registration is per account until the owner publishes the app to a
+workspace or the directory. `plugins/sift-lens/.app.json` maps this plugin to the owner's
+registration.
 
 ## What is inside
 
