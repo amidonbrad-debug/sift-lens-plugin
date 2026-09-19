@@ -5,7 +5,7 @@
     {
       "name": "sift-lens",
       "source": { "source": "local", "path": "./plugins/sift-lens" },
-      "policy": { "installation": "AVAILABLE", "authentication": "NONE" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_USE" },
       "category": "Research"
     }
   ]
