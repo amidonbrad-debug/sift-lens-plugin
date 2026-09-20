@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "sift-lens",
   "version": "0.1.0",
-  "description": "Sift Lens: read and question tonight's Sift equity-research board \u2014 what stands out, a company's record with its chart, what is fresh since the lock, the night waterfall and the outcome ledgers. Read-only; nothing here is a recommendation.",
+  "description": "Investigate Sift's dated research with your own assistant: inspect core records, retrieve available supporting evidence, and explore new sources through the host's tools. Coverage, uncertainty and source dates stay explicit.",
   "author": {
     "name": "Sift"
   },
@@ -11,24 +11,30 @@
     "equities",
     "sift"
   ],
+  "interface": {
+    "displayName": "Sift Lens",
+    "shortDescription": "Question Sift research with your own assistant.",
+    "longDescription": "Ask why a stock received its valuation, what challenges it, or investigate an unfamiliar company or event. Lens distinguishes the published core snapshot, available retained research and new evidence found through your assistant's tools. Where delivered, retrieve actual inputs, source text and analyst/adversary reasoning; inspect coverage and missing-data explanations. Your own assistant does the additional reasoning. Retrieval never starts a model analysis on the project's account. Findings remain separate from accepted core facts. Experimental fake-money research; no order path.",
+    "developerName": "Sift",
+    "category": "Research",
+    "capabilities": [
+      "Interactive",
+      "Read"
+    ],
+    "websiteURL": "https://sift-lens.amidonbrad.workers.dev/",
+    "composerIcon": "./assets/sift-lens.svg",
+    "logo": "./assets/sift-lens.png",
+    "logoDark": "./assets/sift-lens.png",
+    "defaultPrompt": [
+      "Show me the Sift board",
+      "Why did this company get its estimated value, and what would break the case?",
+      "What is new since the last snapshot, and how fresh is the data?"
+    ],
+    "brandColor": "#2bc8ea",
+    "screenshots": []
+  },
   "extensions": {
     "com.openai": {
-      "interface": {
-        "displayName": "Sift Lens",
-        "shortDescription": "Tonight's Sift board, questioned on your own account.",
-        "longDescription": "The Sift pipeline freezes evidence, locks a price, has an analyst argue a thesis and an adversary attack it, then publishes Top Picks and Qualified Picks. The Lens is the private analyst layer over that board: ask what stands out, open a company's record and chart, see what landed after the lock, the night waterfall and the outcome ledgers. Read-only. Nothing is a recommendation; no order path exists.",
-        "developerName": "Sift",
-        "category": "Research",
-        "capabilities": [
-          "Read"
-        ],
-        "defaultPrompt": [
-          "What stands out on tonight's board?",
-          "Second opinion on EOLS.",
-          "What is fresh since the lock?"
-        ],
-        "brandColor": "#2bc8ea"
-      },
       "apps": "./.app.json"
     }
   }

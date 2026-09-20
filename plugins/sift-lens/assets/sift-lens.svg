@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192" role="img" aria-label="Sift">
+  <title>Sift</title>
+  <defs>
+    <linearGradient id="sift-mark" x1="24" y1="168" x2="168" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f6bff"/>
+      <stop offset=".52" stop-color="#2bc8ea"/>
+      <stop offset="1" stop-color="#22d46a"/>
+    </linearGradient>
+    <radialGradient id="sift-glow" cx=".5" cy=".42" r=".62">
+      <stop offset="0" stop-color="#2bc8ea" stop-opacity=".30"/>
+      <stop offset="1" stop-color="#2bc8ea" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="192" height="192" rx="44" fill="#050608"/>
+  <rect width="192" height="192" rx="44" fill="url(#sift-glow)"/>
+  <rect x="1.5" y="1.5" width="189" height="189" rx="42.5" fill="none" stroke="url(#sift-mark)" stroke-opacity=".55" stroke-width="3"/>
+  <path d="M96 30 166 66 96 102 26 66z" fill="url(#sift-mark)"/>
+  <path d="M96 96 148 122 96 148 44 122z" fill="url(#sift-mark)" opacity=".62"/>
+  <path d="M96 138 128 154 96 170 64 154z" fill="url(#sift-mark)" opacity=".34"/>
+</svg>

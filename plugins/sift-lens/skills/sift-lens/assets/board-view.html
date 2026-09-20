@@ -1,0 +1,108 @@
+<div id="__SIFT_ROOT__" role="region" aria-label="Sift published research board">
+  <div class="lens-heading">
+    <div><h2>Sift Lens</h2><div class="text-small" data-snapshot></div></div>
+    <span class="viz-badge">Experimental · fake-money research</span>
+  </div>
+  <p class="text-small text-muted" data-coverage></p>
+  <div class="table-responsive">
+    <table class="table">
+      <caption class="sr-only">Published companies in connector order; choose a company to inspect its dated record.</caption>
+      <thead><tr><th scope="col">Company</th><th scope="col">Published label</th><th scope="col" class="text-end">Gap to estimated value</th></tr></thead>
+      <tbody data-rows></tbody>
+    </table>
+  </div>
+  <p data-empty hidden>No companies were returned for this board.</p>
+  <section class="card" data-detail aria-live="polite" aria-label="Selected published record">
+    <h3 data-company></h3>
+    <div class="viz-grid">
+      <div><div class="text-small">Locked close</div><div class="tabular-nums" data-lock></div><div class="text-small" data-lock-date></div></div>
+      <div><div class="text-small">Estimated value</div><div class="tabular-nums" data-value></div><div class="text-small" data-value-context></div></div>
+      <div><div class="text-small">Adversary verdict</div><div data-adversary></div><div class="text-small" data-examined></div></div>
+    </div>
+    <p class="text-small" data-record-context></p>
+    <button type="button" class="btn" data-investigate>Investigate this company</button>
+    <p class="text-small" data-action-status role="status" hidden></p>
+  </section>
+  <p class="text-small text-muted" data-provenance></p>
+  <template data-row-template><tr><td><button type="button" class="btn btn-ghost" data-select aria-pressed="false"></button><span class="lens-name text-small" data-name></span></td><td data-label></td><td class="text-end tabular-nums" data-gap></td></tr></template>
+  <script type="application/json" data-board>__SIFT_PAYLOAD__</script>
+</div>
+<style>
+  #__SIFT_ROOT__ .lens-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+  #__SIFT_ROOT__ .lens-name { display: block; overflow-wrap: anywhere; }
+  #__SIFT_ROOT__ [data-record-context], #__SIFT_ROOT__ [data-provenance] { overflow-wrap: anywhere; }
+</style>
+<script>
+(() => {
+  'use strict';
+  const root = document.getElementById('__SIFT_ROOT__');
+  const payload = JSON.parse(root.querySelector('[data-board]').textContent);
+  const board = payload.board;
+  const find = selector => root.querySelector(selector);
+  const text = (selector, value) => { find(selector).textContent = value; };
+  const missing = 'Unavailable';
+  const number = value => typeof value === 'number' && Number.isFinite(value)
+    ? new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value) : missing;
+  const gap = value => typeof value !== 'number' || !Number.isFinite(value) ? missing
+    : value === 0 ? 'At estimated value' : `${(Math.abs(value) * 100).toFixed(1)}% ${value < 0 ? 'below' : 'above'}`;
+  const string = value => typeof value === 'string' && value.length ? value : missing;
+  const counts = board.counts;
+  const readTime = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York',
+    dateStyle: 'medium', timeStyle: 'long' }).format(new Date(payload.read_at));
+  text('[data-snapshot]', `Published snapshot ${board.night} · board as of ${board.board_as_of}`);
+  text('[data-coverage]', `${counts.top_picks} Top Picks · ${counts.qualified_picks} Qualified Picks · ${counts.earlier_cases} earlier cases outside this view`);
+  text('[data-provenance]', `Source: installed Sift Lens board · retrieved ${readTime} · refresh status not supplied by this board response. Prices and values retain the published record; currency is not supplied by this response.`);
+  let selected = null;
+  const buttons = [];
+  function select(row) {
+    selected = row;
+    buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.ticker === row.ticker)));
+    text('[data-company]', `${row.ticker} · ${string(row.name)}`);
+    text('[data-lock]', number(row.locked_close));
+    text('[data-lock-date]', `Price lock ${string(row.lock_date)}`);
+    text('[data-value]', number(row.estimated_value));
+    text('[data-value-context]', row.estimated_value == null ? 'Not supplied in the published record' : 'Published base estimate');
+    text('[data-adversary]', string(row.adversary));
+    text('[data-examined]', `Examined ${string(row.examined_night)}`);
+    text('[data-record-context]', `${string(row.label)} · original resolve-by ${string(row.settles_by)} · snapshot freshness flag ${string(row.state)}`);
+    text('[data-investigate]', `Investigate ${row.ticker}`);
+    find('[data-action-status]').hidden = true;
+  }
+  board.rows.forEach(row => {
+    const fragment = find('[data-row-template]').content.cloneNode(true);
+    const button = fragment.querySelector('[data-select]');
+    button.textContent = row.ticker;
+    button.dataset.ticker = row.ticker;
+    button.setAttribute('aria-label', `Inspect ${row.ticker} published record`);
+    button.addEventListener('click', () => select(row));
+    fragment.querySelector('[data-name]').textContent = string(row.name);
+    fragment.querySelector('[data-label]').textContent = string(row.label);
+    fragment.querySelector('[data-gap]').textContent = gap(row.gap_to_value);
+    buttons.push(button);
+    find('[data-rows]').append(fragment);
+  });
+  find('[data-detail]').hidden = board.rows.length === 0;
+  find('[data-empty]').hidden = board.rows.length !== 0;
+  if (board.rows.length) select(board.rows[0]);
+  find('[data-investigate]').addEventListener('click', async () => {
+    if (!selected) return;
+    const ticker = selected.ticker;
+    const prompt = `Using the installed Sift Lens connector, explain ${ticker}'s published valuation and what challenges it. Retrieve its company record, supporting research inputs and contrary evidence. Cite sources, preserve their dates and disclose unavailable material. The displayed board was snapshot ${board.night}; keep newer evidence and your interpretation distinct from that accepted core. Retrieval must not trigger a project stock-model run.`;
+    const status = find('[data-action-status]');
+    status.hidden = false;
+    if (typeof window.openai?.sendFollowUpMessage !== 'function') {
+      status.textContent = `Chat follow-up is unavailable here. Ask in chat: explain ${ticker}'s valuation and contrary evidence using Sift Lens.`;
+      return;
+    }
+    const button = find('[data-investigate]');
+    button.disabled = true;
+    status.textContent = 'Opening the research question…';
+    try {
+      await window.openai.sendFollowUpMessage({ prompt, title: `Investigate ${ticker}` });
+      status.textContent = 'Research question handed to the chat; no result or saved finding is implied.';
+    } catch {
+      status.textContent = 'The research question was not sent. You can ask it directly in chat.';
+    } finally { button.disabled = false; }
+  });
+})();
+</script>
