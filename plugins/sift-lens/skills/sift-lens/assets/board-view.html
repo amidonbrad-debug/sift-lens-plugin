@@ -4,10 +4,11 @@
     <span class="viz-badge">Experimental · fake-money research</span>
   </div>
   <p class="text-small text-muted" data-coverage></p>
+  <p class="text-small" data-valuation-notice></p>
   <div class="table-responsive">
     <table class="table">
       <caption class="sr-only">Published companies in connector order; choose a company to inspect its dated record.</caption>
-      <thead><tr><th scope="col">Company</th><th scope="col">Published label</th><th scope="col" class="text-end">Gap to estimated value</th></tr></thead>
+      <thead><tr><th scope="col">Company</th><th scope="col">Published label</th><th scope="col" class="text-end">Gap to current fair value</th></tr></thead>
       <tbody data-rows></tbody>
     </table>
   </div>
@@ -16,9 +17,12 @@
     <h3 data-company></h3>
     <div class="viz-grid">
       <div><div class="text-small">Locked close</div><div class="tabular-nums" data-lock></div><div class="text-small" data-lock-date></div></div>
-      <div><div class="text-small">Estimated value</div><div class="tabular-nums" data-value></div><div class="text-small" data-value-context></div></div>
+      <div><div class="text-small">CURRENT BASE fair value</div><div class="tabular-nums" data-value></div><div class="text-small" data-value-context></div></div>
       <div><div class="text-small">Adversary verdict</div><div data-adversary></div><div class="text-small" data-examined></div></div>
     </div>
+    <p class="text-small" data-valuation-dates></p>
+    <p class="text-small" data-valuation-identity></p>
+    <p class="text-small" data-pick-hold hidden></p>
     <p class="text-small" data-record-context></p>
     <button type="button" class="btn" data-investigate>Investigate this company</button>
     <p class="text-small" data-action-status role="status" hidden></p>
@@ -30,7 +34,7 @@
 <style>
   #__SIFT_ROOT__ .lens-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
   #__SIFT_ROOT__ .lens-name { display: block; overflow-wrap: anywhere; }
-  #__SIFT_ROOT__ [data-record-context], #__SIFT_ROOT__ [data-provenance] { overflow-wrap: anywhere; }
+  #__SIFT_ROOT__ [data-record-context], #__SIFT_ROOT__ [data-provenance], #__SIFT_ROOT__ [data-valuation-dates], #__SIFT_ROOT__ [data-valuation-identity], #__SIFT_ROOT__ [data-value] { overflow-wrap: anywhere; }
 </style>
 <script>
 (() => {
@@ -44,14 +48,39 @@
   const number = value => typeof value === 'number' && Number.isFinite(value)
     ? new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value) : missing;
   const gap = value => typeof value !== 'number' || !Number.isFinite(value) ? missing
-    : value === 0 ? 'At estimated value' : `${(Math.abs(value) * 100).toFixed(1)}% ${value < 0 ? 'below' : 'above'}`;
+    : value === 0 ? 'At current fair value' : `${(Math.abs(value) * 100).toFixed(1)}% ${value < 0 ? 'below' : 'above'}`;
   const string = value => typeof value === 'string' && value.length ? value : missing;
+  const corrected = board.valuation_display_contract === 'HORIZON-DISPLAY-1/r2';
+  const selectedCurrent = row => corrected && row.display_value_status === 'SELECTED_CURRENT'
+    && row.display_value_reason === null && row.display_value_horizon === 'CURRENT'
+    && row.display_value_currency === 'USD' && typeof row.display_valuation_id === 'string' && row.display_valuation_id.length > 0
+    && typeof row.current_fair_value === 'number' && Number.isFinite(row.current_fair_value) && row.current_fair_value > 0
+    && typeof row.gap_to_current_fair_value === 'number' && Number.isFinite(row.gap_to_current_fair_value)
+    && row.estimated_value === null && row.gap_to_value === null;
+  const precision = row => row.display_precision_status === 'DECLARED' && row.display_report_precision
+    && !Array.isArray(row.display_report_precision) && Number.isInteger(row.display_report_precision.fair_value)
+    && row.display_report_precision.fair_value >= 0 && row.display_report_precision.fair_value <= 6
+    ? row.display_report_precision.fair_value : null;
+  // Match the reviewed widget's decimal-spelling HALF_EVEN display, not binary toFixed ties.
+  function halfEven(value, places) {
+    const parts = String(value).toLowerCase().split('e'), coefficient = parts[0];
+    const scale = Number(parts[1] || 0) - (coefficient.split('.')[1] || '').length + places;
+    let units = BigInt(coefficient.replace('.', ''));
+    if (scale >= 0) units *= 10n ** BigInt(scale);
+    else {
+      const divisor = 10n ** BigInt(-scale), quotient = units / divisor, remainder = units % divisor;
+      units = quotient + (remainder * 2n > divisor || (remainder * 2n === divisor && quotient % 2n !== 0n) ? 1n : 0n);
+    }
+    const digits = String(units).padStart(places + 1, '0');
+    return places ? digits.slice(0, -places) + '.' + digits.slice(-places) : digits;
+  }
   const counts = board.counts;
   const readTime = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York',
     dateStyle: 'medium', timeStyle: 'long' }).format(new Date(payload.read_at));
   text('[data-snapshot]', `Published snapshot ${board.night} · board as of ${board.board_as_of}`);
   text('[data-coverage]', `${counts.top_picks} Top Picks · ${counts.qualified_picks} Qualified Picks · ${counts.earlier_cases} earlier cases outside this view`);
-  text('[data-provenance]', `Source: installed Sift Lens board · retrieved ${readTime} · refresh status not supplied by this board response. Prices and values retain the published record; currency is not supplied by this response.`);
+  text('[data-provenance]', `Source: installed Sift Lens board · retrieved ${readTime} · refresh status not supplied by this board response. Prices are dated; locked-close currency is not supplied by this response.`);
+  text('[data-valuation-notice]', corrected ? 'FAIR VALUE PROVISIONAL · independent financial review. Gaps compare the locked close with the same CURRENT BASE value, not an entry price.' : 'Valuation and gap under review; no source-bound current value is available in this response.');
   let selected = null;
   const buttons = [];
   function select(row) {
@@ -60,8 +89,16 @@
     text('[data-company]', `${row.ticker} · ${string(row.name)}`);
     text('[data-lock]', number(row.locked_close));
     text('[data-lock-date]', `Price lock ${string(row.lock_date)}`);
-    text('[data-value]', number(row.estimated_value));
-    text('[data-value-context]', row.estimated_value == null ? 'Not supplied in the published record' : 'Published base estimate');
+    const usable = selectedCurrent(row), places = precision(row);
+    text('[data-value]', usable ? `USD ${halfEven(row.current_fair_value, places === null ? 2 : places)}` : missing);
+    text('[data-value-context]', usable
+      ? `FAIR VALUE PROVISIONAL · ${places === null ? '2-decimal display default, not a research declaration' : `research precision: ${places} decimal places`}`
+      : corrected ? `Current fair value unavailable · ${string(row.display_value_reason || 'binding unavailable')} · under review` : 'Valuation and gap under review');
+    text('[data-valuation-dates]', `Analysis cutoff ${string(row.display_analysis_cutoff)} · price lock ${string(row.display_price_lock_date)} (${string(row.display_price_lock_date_basis)}) · valuation as-of unknown`);
+    text('[data-valuation-identity]', usable ? `Selected valuation ${row.display_valuation_id}` : 'No selected current valuation');
+    const hold = row.publication_qualification?.sponsor_pick_hold;
+    find('[data-pick-hold]').hidden = !hold;
+    text('[data-pick-hold]', hold ? `Pick held: ${string(hold.reason)}${hold.authority ? ` · ${hold.authority}` : ''}. Original verdict retained; this is not a current pick.` : '');
     text('[data-adversary]', string(row.adversary));
     text('[data-examined]', `Examined ${string(row.examined_night)}`);
     text('[data-record-context]', `${string(row.label)} · original resolve-by ${string(row.settles_by)} · snapshot freshness flag ${string(row.state)}`);
@@ -77,7 +114,7 @@
     button.addEventListener('click', () => select(row));
     fragment.querySelector('[data-name]').textContent = string(row.name);
     fragment.querySelector('[data-label]').textContent = string(row.label);
-    fragment.querySelector('[data-gap]').textContent = gap(row.gap_to_value);
+    fragment.querySelector('[data-gap]').textContent = selectedCurrent(row) ? gap(row.gap_to_current_fair_value) : missing;
     buttons.push(button);
     find('[data-rows]').append(fragment);
   });

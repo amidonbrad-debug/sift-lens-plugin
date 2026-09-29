@@ -12,17 +12,19 @@ useful in exploratory analysis before Backend review or core admission.
 
 ## Show the view, do not retype it
 
-When the user asks for the dashboard, the board, the picks or “what have we got”, call `board`
-and let the rendered view be the answer. In hosts that render the connector's view, the board,
-company, fresh, waterfall, outcomes and verdict screens all draw themselves from the tool result,
-including the data-freshness strip. **Do not restate the returned rows as a text table, and do not
-paste the `rules` text into the reply.** Both duplicate what the view already shows and push it off
-the screen. Keep the written reply to a line or two: the snapshot date and its age, and anything
-the view cannot say, such as a refusal, a missing field or a caveat the user should not miss. If
-the user asks a question about one company, answer it in prose and let its record render beside
-the answer.
+When the user asks to open the dashboard or board, use `open_lens` with `view: "board"` if
+the installed connector exposes it. To open a company, use `view: "company"` and its `ticker`.
+Only this tool requests a workspace. `board`, `company`, `fresh`, `waterfall`, `night_results`,
+`outcomes`, `search`, `fetch` and `rules` return data; use them for ordinary research and
+navigation without opening another workspace. Do not call `open_lens` after every source read
+or question. If an older installation lacks it, report that capability accurately.
 
-In Codex, where the connector's view is not mounted, follow the
+When a view actually renders, do not duplicate its rows as a text table or paste the `rules`
+text above it. Keep accompanying text to a line or two for dates, missing fields or qualifications
+the user should not miss. Answer requested explanations fully; a research question does not
+require a new visual. Questions currently return answers in chat, not inside the workspace.
+
+If the host cannot mount the connector's view, follow the
 [Codex display guide](references/codex-display.md): retrieve actual installed board data and
 display it with the host's visualization capability. Do not assume a remote widget rendered merely
 because its data tool succeeded, and say so if no visual could be produced. Ordinary research
