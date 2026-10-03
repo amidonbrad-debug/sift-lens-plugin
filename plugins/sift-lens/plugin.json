@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "sift-lens",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Investigate Sift's dated research with your own assistant: inspect core records, retrieve available supporting evidence, and explore new sources through the host's tools. Coverage, uncertainty and source dates stay explicit.",
   "author": {
     "name": "Sift"
@@ -11,31 +11,30 @@
     "equities",
     "sift"
   ],
-  "interface": {
-    "displayName": "Sift Lens",
-    "shortDescription": "Question Sift research with your own assistant.",
-    "longDescription": "Ask why a stock received its valuation, what challenges it, or investigate an unfamiliar company or event. Lens distinguishes the published core snapshot, available retained research and new evidence found through your assistant's tools. Where delivered, retrieve actual inputs, source text and analyst/adversary reasoning; inspect coverage and missing-data explanations. Your own assistant does the additional reasoning. Retrieval never starts a model analysis on the project's account. Findings remain separate from accepted core facts. Experimental fake-money research; no order path.",
-    "developerName": "Sift",
-    "category": "Research",
-    "capabilities": [
-      "Interactive",
-      "Read"
-    ],
-    "websiteURL": "https://sift-lens.amidonbrad.workers.dev/",
-    "composerIcon": "./assets/sift-lens.svg",
-    "logo": "./assets/sift-lens.png",
-    "logoDark": "./assets/sift-lens.png",
-    "defaultPrompt": [
-      "Show me the Sift board",
-      "Why did this company get its estimated value, and what would break the case?",
-      "What is new since the last snapshot, and how fresh is the data?"
-    ],
-    "brandColor": "#2bc8ea",
-    "screenshots": []
-  },
   "extensions": {
     "com.openai": {
-      "apps": "./.app.json"
+      "apps": "./.app.json",
+      "interface": {
+        "displayName": "Sift Lens",
+        "shortDescription": "Question Sift research with your own assistant.",
+        "longDescription": "Ask why a stock received its valuation, what challenges it, or investigate an unfamiliar company or event. Lens distinguishes the published core snapshot, available retained research and new evidence found through your assistant's tools. Where delivered, retrieve actual inputs, source text and analyst/adversary reasoning; inspect coverage and missing-data explanations. Your own assistant does the additional reasoning. Retrieval never starts a model analysis on the project's account. Findings remain separate from accepted core facts. Experimental fake-money research; no order path.",
+        "developerName": "Sift",
+        "category": "Research",
+        "capabilities": [
+          "Interactive",
+          "Read"
+        ],
+        "composerIcon": "./assets/sift-lens.svg",
+        "logo": "./assets/sift-lens.png",
+        "logoDark": "./assets/sift-lens.png",
+        "defaultPrompt": [
+          "Open Sift Lens and show the visual board.",
+          "Why did this company get its estimated value, and what would break the case?",
+          "What is new since the last snapshot, and how fresh is the data?"
+        ],
+        "brandColor": "#2bc8ea",
+        "screenshots": []
+      }
     }
   }
 }

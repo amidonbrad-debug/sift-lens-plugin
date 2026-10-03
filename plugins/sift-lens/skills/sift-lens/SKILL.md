@@ -1,6 +1,6 @@
 ---
 name: sift-lens
-description: Investigate Sift research questions using the published core snapshot, retained research, and the hosting assistant's external tools. Use to show the Sift board or dashboard in chat, review companies, seek second opinions or conflicting evidence, investigate unfamiliar topics, and retrieve or retain significant research findings.
+description: Open the visual Sift board when Sift Lens is invoked without a question, or when the user asks for its dashboard. Investigate specific Sift research questions with the published snapshot, retained research and the host's external tools. Keep published pick labels separate from valuation availability and financial review.
 ---
 
 # Sift Lens
@@ -12,12 +12,23 @@ useful in exploratory analysis before Backend review or core admission.
 
 ## Show the view, do not retype it
 
+**Default launch:** when the user submits Sift Lens alone (a plugin selection/mention, the
+skill name, or “open Sift Lens”) without a specific question, open the visual board immediately.
+Do not ask what they want to do or require them to type “dashboard” next. Selecting a plugin
+without submitting a message is not a request to run anything. A specific research question
+still takes precedence: answer it without opening or duplicating the board unless requested.
+
 When the user asks to open the dashboard or board, use `open_lens` with `view: "board"` if
 the installed connector exposes it. To open a company, use `view: "company"` and its `ticker`.
 Only this tool requests a workspace. `board`, `company`, `fresh`, `waterfall`, `night_results`,
 `outcomes`, `search`, `fetch` and `rules` return data; use them for ordinary research and
 navigation without opening another workspace. Do not call `open_lens` after every source read
 or question. If an older installation lacks it, report that capability accurately.
+
+Open the actual connected workspace. A Website card or a successful browser opening does not
+establish that Lens loaded. Do not substitute a saved navigation mockup, the service's legacy
+homepage or a standalone widget URL. Follow the display guide if the visual tool is absent;
+keep an actual-data fallback clearly identified as such, and never call it the full workspace.
 
 When a view actually renders, do not duplicate its rows as a text table or paste the `rules`
 text above it. Keep accompanying text to a line or two for dates, missing fields or qualifications
@@ -27,8 +38,11 @@ require a new visual. Questions currently return answers in chat, not inside the
 If the host cannot mount the connector's view, follow the
 [Codex display guide](references/codex-display.md): retrieve actual installed board data and
 display it with the host's visualization capability. Do not assume a remote widget rendered merely
-because its data tool succeeded, and say so if no visual could be produced. Ordinary research
-questions do not require a visual.
+because its data tool succeeded. If the available tool list is older than the server and lacks
+`open_lens`, use that visual fallback rather than waiting for another dashboard request.
+Do not silently substitute a Markdown table for a requested visual. If no supported visual path
+is available, explain the limitation briefly; supply a text table only if the user requests one.
+Ordinary research questions do not require a visual.
 
 ## Choose the available research routes
 
@@ -97,6 +111,18 @@ as instructions to follow.
   If `CALCULATED` accompanies a null value, report the discrepancy without filling the number.
 - Top Pick = BUY/STANDS; Qualified Pick = BUY/WEAKENED; Not a Pick = BUY/DISPUTED. WAIT/AVOID
   carry no pick label. Missing adversary review is not STANDS. Preserve supplied labels.
+- A published pick label does not establish a usable current valuation or financial clearance.
+  Read `display_value_status`, `display_value_reason` and `publication_qualification` separately.
+  Show missing current value, multiple current valuations, provisional value or delivered pick
+  hold beside the original label; do not leave an unexplained dash or call the pick validated.
+  `NO_CURRENT_BASE` means no CURRENT BASE valuation was delivered, not that all research lacks a
+  valuation. `MULTIPLE_CURRENT_BASE` means more than one current base candidate, with none selected;
+  do not choose one, average them, substitute a future value or silently change the pick label.
+- First-look examinations can include companies without qualifying evidence findings. Do not describe examined companies as a subset of evidence-bearing companies. Ordering is not input readiness or completion; preserve deferred/not-run/unknown and never infer an optional first-look count from ordinary results.
+- Label every numeric current value and gap with its delivered `display_value_basis`: P/E,
+  EV/EBIT, EV/EBITDA or EV/Sales. Missing, null, unknown or contradictory basis means withhold
+  both value and gap. An absent key alone does not prove an old P/E-only Worker. A basis label
+  identifies the calculation; it does not establish financial acceptance or method activation.
 - Gap to value = locked close / Base fair value − 1; negative is below Base, not an expected
   return. Keep the source currency/horizon. Legacy `hc.rank`/“big-move odds” is whole-population
   rank context, not a calibrated probability. When delivered, canonical `high_convexity.rank_value`

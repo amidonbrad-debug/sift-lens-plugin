@@ -5,10 +5,12 @@
   </div>
   <p class="text-small text-muted" data-coverage></p>
   <p class="text-small" data-valuation-notice></p>
-  <div class="table-responsive">
+  <p class="text-small" data-label-notice>Published labels reflect the recorded research assessment. They do not confirm current fair value or completed financial review.</p>
+  <p class="text-small text-muted">Choose a company below. Scroll within the company list for more.</p>
+  <div class="table-responsive" role="region" aria-label="Published companies; scroll for more" tabindex="0">
     <table class="table">
       <caption class="sr-only">Published companies in connector order; choose a company to inspect its dated record.</caption>
-      <thead><tr><th scope="col">Company</th><th scope="col">Published label</th><th scope="col" class="text-end">Gap to current fair value</th></tr></thead>
+      <thead><tr><th scope="col">Company</th><th scope="col">Published label / valuation status</th><th scope="col" class="text-end">Gap to current fair value</th></tr></thead>
       <tbody data-rows></tbody>
     </table>
   </div>
@@ -28,12 +30,24 @@
     <p class="text-small" data-action-status role="status" hidden></p>
   </section>
   <p class="text-small text-muted" data-provenance></p>
-  <template data-row-template><tr><td><button type="button" class="btn btn-ghost" data-select aria-pressed="false"></button><span class="lens-name text-small" data-name></span></td><td data-label></td><td class="text-end tabular-nums" data-gap></td></tr></template>
+  <template data-row-template><tr><td><button type="button" class="btn btn-ghost" data-select aria-pressed="false"></button><span class="lens-name text-small" data-name></span></td><td><span class="lens-label" data-label></span><span class="lens-value-badge" data-valuation-status></span><span class="sr-only" data-label-explanation></span></td><td class="text-end tabular-nums" data-gap></td></tr></template>
   <script type="application/json" data-board>__SIFT_PAYLOAD__</script>
 </div>
 <style>
   #__SIFT_ROOT__ .lens-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
   #__SIFT_ROOT__ .lens-name { display: block; overflow-wrap: anywhere; }
+  #__SIFT_ROOT__ .table-responsive { max-height: 280px; overflow: auto; }
+  #__SIFT_ROOT__ thead th { position: sticky; top: 0; z-index: 1; background: #fff; }
+  #__SIFT_ROOT__ .lens-label { display: block; font-weight: 650; }
+  #__SIFT_ROOT__ .lens-value-badge { display: inline-block; margin: 4px 0; padding: 3px 7px; border: 1px solid currentColor; border-radius: 7px; font-size: 12px; line-height: 1.4; color: #805200; background: #fff4d6; }
+  #__SIFT_ROOT__ .lens-value-badge[data-state="provisional"] { color: #075985; background: #e0f2fe; }
+  #__SIFT_ROOT__ .lens-value-badge[data-state="held"] { color: #9f1239; background: #ffe4e6; }
+  @media (prefers-color-scheme: dark) {
+    #__SIFT_ROOT__ thead th { background: #171717; }
+    #__SIFT_ROOT__ .lens-value-badge { color: #f8d477; background: #3b2c14; }
+    #__SIFT_ROOT__ .lens-value-badge[data-state="provisional"] { color: #8ddcfa; background: #123348; }
+    #__SIFT_ROOT__ .lens-value-badge[data-state="held"] { color: #fda4af; background: #431c2a; }
+  }
   #__SIFT_ROOT__ [data-record-context], #__SIFT_ROOT__ [data-provenance], #__SIFT_ROOT__ [data-valuation-dates], #__SIFT_ROOT__ [data-valuation-identity], #__SIFT_ROOT__ [data-value] { overflow-wrap: anywhere; }
 </style>
 <script>
@@ -51,12 +65,26 @@
     : value === 0 ? 'At current fair value' : `${(Math.abs(value) * 100).toFixed(1)}% ${value < 0 ? 'below' : 'above'}`;
   const string = value => typeof value === 'string' && value.length ? value : missing;
   const corrected = board.valuation_display_contract === 'HORIZON-DISPLAY-1/r2';
+  const basisLabels = Object.freeze({USD_PER_SHARE_EARNINGS_TIMES_PE: 'P/E',
+    USD_PER_SHARE_EV_EBIT_MULTIPLE: 'EV/EBIT', USD_PER_SHARE_EV_EBITDA_MULTIPLE: 'EV/EBITDA',
+    USD_PER_SHARE_EV_SALES_MULTIPLE: 'EV/Sales'});
+  // The response has no verified old-Worker identity. Absence cannot establish P/E.
+  const basisLabel = row => typeof row.display_value_basis === 'string' && Object.hasOwn(basisLabels, row.display_value_basis)
+    ? basisLabels[row.display_value_basis] : null;
   const selectedCurrent = row => corrected && row.display_value_status === 'SELECTED_CURRENT'
+    && basisLabel(row) !== null
     && row.display_value_reason === null && row.display_value_horizon === 'CURRENT'
     && row.display_value_currency === 'USD' && typeof row.display_valuation_id === 'string' && row.display_valuation_id.length > 0
     && typeof row.current_fair_value === 'number' && Number.isFinite(row.current_fair_value) && row.current_fair_value > 0
     && typeof row.gap_to_current_fair_value === 'number' && Number.isFinite(row.gap_to_current_fair_value)
     && row.estimated_value === null && row.gap_to_value === null;
+  function valuationStatus(row) {
+    if (row.publication_qualification?.sponsor_pick_hold) return {state: 'held', label: 'Pick held', detail: 'The original label is retained; this is not a current pick.'};
+    if (selectedCurrent(row)) return {state: 'provisional', label: 'Fair value provisional', detail: 'Current value displayed; financial review is incomplete.'};
+    if (corrected && row.display_value_status === 'CURRENT_UNAVAILABLE' && row.display_value_reason === 'NO_CURRENT_BASE') return {state: 'missing', label: 'Current value missing', detail: 'No CURRENT BASE valuation was delivered.'};
+    if (corrected && row.display_value_status === 'CURRENT_AMBIGUOUS' && row.display_value_reason === 'MULTIPLE_CURRENT_BASE') return {state: 'ambiguous', label: 'Multiple current valuations', detail: 'More than one CURRENT BASE candidate was delivered; none is selected.'};
+    return {state: 'unavailable', label: 'Valuation unavailable', detail: 'A unique, usable current valuation was not delivered.'};
+  }
   const precision = row => row.display_precision_status === 'DECLARED' && row.display_report_precision
     && !Array.isArray(row.display_report_precision) && Number.isInteger(row.display_report_precision.fair_value)
     && row.display_report_precision.fair_value >= 0 && row.display_report_precision.fair_value <= 6
@@ -90,10 +118,10 @@
     text('[data-lock]', number(row.locked_close));
     text('[data-lock-date]', `Price lock ${string(row.lock_date)}`);
     const usable = selectedCurrent(row), places = precision(row);
-    text('[data-value]', usable ? `USD ${halfEven(row.current_fair_value, places === null ? 2 : places)}` : missing);
+    text('[data-value]', usable ? `USD ${halfEven(row.current_fair_value, places === null ? 2 : places)} · ${basisLabel(row)} basis` : missing);
     text('[data-value-context]', usable
       ? `FAIR VALUE PROVISIONAL · ${places === null ? '2-decimal display default, not a research declaration' : `research precision: ${places} decimal places`}`
-      : corrected ? `Current fair value unavailable · ${string(row.display_value_reason || 'binding unavailable')} · under review` : 'Valuation and gap under review');
+      : `${valuationStatus(row).detail} Valuation and gap remain under review.`);
     text('[data-valuation-dates]', `Analysis cutoff ${string(row.display_analysis_cutoff)} · price lock ${string(row.display_price_lock_date)} (${string(row.display_price_lock_date_basis)}) · valuation as-of unknown`);
     text('[data-valuation-identity]', usable ? `Selected valuation ${row.display_valuation_id}` : 'No selected current valuation');
     const hold = row.publication_qualification?.sponsor_pick_hold;
@@ -114,7 +142,12 @@
     button.addEventListener('click', () => select(row));
     fragment.querySelector('[data-name]').textContent = string(row.name);
     fragment.querySelector('[data-label]').textContent = string(row.label);
-    fragment.querySelector('[data-gap]').textContent = selectedCurrent(row) ? gap(row.gap_to_current_fair_value) : missing;
+    const qualification = valuationStatus(row);
+    const badge = fragment.querySelector('[data-valuation-status]');
+    badge.textContent = qualification.label;
+    badge.dataset.state = qualification.state;
+    fragment.querySelector('[data-label-explanation]').textContent = qualification.detail;
+    fragment.querySelector('[data-gap]').textContent = selectedCurrent(row) ? `${gap(row.gap_to_current_fair_value)} · ${basisLabel(row)} basis` : missing;
     buttons.push(button);
     find('[data-rows]').append(fragment);
   });
