@@ -3,6 +3,21 @@
 Use the actual version and fields returned by the connector. An implemented producer or a new
 guide does not mean a new core snapshot has been delivered.
 
+New independent methodology transport uses `sift-methodology-consumer/v1` on board/company
+responses and the exact current descriptor's `framework-result:<digest>:<method_id>` fetch IDs.
+Preserve the served release, company, method/version, card, raw-result hash, analysis timestamp,
+cutoff, completeness, independent acceptance and selection policy. Raw bytes carry their original
+assumptions, horizons, basis and source dates; summary-only views must say that these are not yet
+displayed. Missing, partial, conditional, unavailable and refused results are not complete.
+
+Only Backend can determine each methodology's qualifying criteria. `qualification_overlap`
+adds a cross-lens classification without changing any individual conclusion or overall board
+qualification. An affirmative count requires approved adoption, COMPLETE results, independent
+ACCEPTED review of the exact raw hash, QUALIFIED selection, a bound criteria/policy and
+`conditional=false`; count a method once. Unknown approval vocabulary fails closed. Keep
+disagreement visible without a universal veto. Passing a quality stage or simply returning BUY
+does not independently establish qualification. Never infer qualification from narrative text.
+
 For a valuation question, identify the methodology of that particular analysis from its retrieved
 content. A modern retained analyst answer may carry `identity.fvf_version`; an older package may
 carry its original policy in `identity.original_archive_identity.policy_version`. Cite the exact

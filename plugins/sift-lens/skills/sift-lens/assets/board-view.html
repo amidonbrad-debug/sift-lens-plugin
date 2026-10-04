@@ -3,20 +3,32 @@
     <div><h2>Sift Lens</h2><div class="text-small" data-snapshot></div></div>
     <span class="viz-badge">Experimental · fake-money research</span>
   </div>
+  <p class="text-small lens-method-name" data-method-name></p>
+  <p class="text-small text-muted">Actual-data summary · full research opens in chat</p>
+  <div data-board-panel>
   <p class="text-small text-muted" data-coverage></p>
   <p class="text-small" data-valuation-notice></p>
+  <details class="text-small" data-view-context><summary>About this view</summary>
+  <p>This fallback contains one retrieved board. Full research and other lens views open through your assistant.</p>
   <p class="text-small" data-label-notice>Published labels reflect the recorded research assessment. They do not confirm current fair value or completed financial review.</p>
-  <p class="text-small text-muted">Choose a company below. Scroll within the company list for more.</p>
-  <div class="table-responsive" role="region" aria-label="Published companies; scroll for more" tabindex="0">
+  </details>
+  <p class="text-small text-muted" data-company-instruction>Choose a company below. Scroll within the company list for more.</p>
+  <div class="table-responsive" data-company-list role="region" aria-label="Published companies; scroll for more" tabindex="0">
     <table class="table">
       <caption class="sr-only">Published companies in connector order; choose a company to inspect its dated record.</caption>
-      <thead><tr><th scope="col">Company</th><th scope="col">Published label / valuation status</th><th scope="col" class="text-end">Gap to current fair value</th></tr></thead>
+      <thead><tr><th scope="col">Company</th><th scope="col" data-status-heading>Published label / valuation status</th><th scope="col" class="text-end" data-last-heading>Gap to current fair value</th></tr></thead>
       <tbody data-rows></tbody>
     </table>
   </div>
   <p data-empty hidden>No companies were returned for this board.</p>
-  <section class="card" data-detail aria-live="polite" aria-label="Selected published record">
-    <h3 data-company></h3>
+  </div>
+  <section class="card" data-detail aria-label="Selected published record" hidden>
+    <button type="button" class="btn btn-ghost" data-back>← Back to results</button>
+    <h3 data-company tabindex="-1"></h3>
+    <div data-detail-overlap></div>
+    <div data-method-detail hidden></div>
+    <section data-research-panel aria-label="Method valuation and entry references" hidden></section>
+    <div data-legacy-detail>
     <div class="viz-grid">
       <div><div class="text-small">Locked close</div><div class="tabular-nums" data-lock></div><div class="text-small" data-lock-date></div></div>
       <div><div class="text-small">CURRENT BASE fair value</div><div class="tabular-nums" data-value></div><div class="text-small" data-value-context></div></div>
@@ -26,27 +38,67 @@
     <p class="text-small" data-valuation-identity></p>
     <p class="text-small" data-pick-hold hidden></p>
     <p class="text-small" data-record-context></p>
+    </div>
     <button type="button" class="btn" data-investigate>Investigate this company</button>
     <p class="text-small" data-action-status role="status" hidden></p>
   </section>
   <p class="text-small text-muted" data-provenance></p>
-  <template data-row-template><tr><td><button type="button" class="btn btn-ghost" data-select aria-pressed="false"></button><span class="lens-name text-small" data-name></span></td><td><span class="lens-label" data-label></span><span class="lens-value-badge" data-valuation-status></span><span class="sr-only" data-label-explanation></span></td><td class="text-end tabular-nums" data-gap></td></tr></template>
+  <template data-row-template><tr><td><button type="button" class="btn btn-ghost" data-select aria-pressed="false"></button><span class="lens-name text-small" data-name></span><div data-row-overlap></div></td><td><span class="lens-label" data-label></span><span class="lens-value-badge" data-valuation-status></span><span class="sr-only" data-label-explanation></span></td><td class="text-end tabular-nums" data-gap></td></tr></template>
   <script type="application/json" data-board>__SIFT_PAYLOAD__</script>
 </div>
 <style>
   #__SIFT_ROOT__ .lens-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
   #__SIFT_ROOT__ .lens-name { display: block; overflow-wrap: anywhere; }
-  #__SIFT_ROOT__ .table-responsive { max-height: 280px; overflow: auto; }
+  #__SIFT_ROOT__ { min-width: 0; }
+  #__SIFT_ROOT__ .text-muted { color: #595959; opacity: 1; }
+  #__SIFT_ROOT__ .viz-badge, #__SIFT_ROOT__ [data-select] { color: #fff; background: #075985; }
+  #__SIFT_ROOT__ [data-research-back], #__SIFT_ROOT__ [data-back] { color: inherit; opacity: 1; font-weight: 600; }
+  #__SIFT_ROOT__ .lens-method-name { font-weight: 700; }
+  #__SIFT_ROOT__ .table { width: 100%; }
+  #__SIFT_ROOT__ th, #__SIFT_ROOT__ td { overflow-wrap: anywhere; vertical-align: top; }
+  #__SIFT_ROOT__ button, #__SIFT_ROOT__ summary { min-height: 44px; }
+  #__SIFT_ROOT__ :focus-visible { outline: 3px solid #1683bf; outline-offset: 3px; }
+  #__SIFT_ROOT__ .lens-overlap { margin: 8px 0; text-align: left; }
+  #__SIFT_ROOT__ .lens-overlap summary { cursor: pointer; padding: 8px; border: 1px solid currentColor; border-radius: 8px; font-weight: 650; line-height: 1.4; }
+  #__SIFT_ROOT__ .lens-overlap[data-multiple="true"] summary { color: #075985; background: #e0f2fe; }
+  #__SIFT_ROOT__ .lens-overlap ul { padding-left: 20px; }
+  #__SIFT_ROOT__ .lens-overlap li { margin: 9px 0; overflow-wrap: anywhere; }
+  #__SIFT_ROOT__ .lens-method-facts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  #__SIFT_ROOT__ .lens-method-facts div { overflow-wrap: anywhere; }
+  #__SIFT_ROOT__ .lens-method-facts dt { font-size: 12px; opacity: .8; }
+  #__SIFT_ROOT__ .lens-method-facts dd { margin: 4px 0 0; }
+  #__SIFT_ROOT__ .lens-status-badges { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 8px 0; }
+  #__SIFT_ROOT__ .lens-status-badges span { border: 1px solid currentColor; border-radius: 6px; padding: 3px 6px; font-size: 12px; }
+  #__SIFT_ROOT__ .lens-research-status { border-left: 4px solid #a66b00; padding: 8px 12px; background: #fff4d6; color: #805200; }
+  #__SIFT_ROOT__ [data-research-panel] { min-width: 0; }
+  #__SIFT_ROOT__ [data-research-panel] details { border-top: 1px solid #7776; margin-top: 12px; }
+  #__SIFT_ROOT__ [data-research-panel] summary { padding: 10px 0; cursor: pointer; font-weight: 600; }
+  #__SIFT_ROOT__ [data-research-panel] p, #__SIFT_ROOT__ [data-research-panel] dd, #__SIFT_ROOT__ [data-research-panel] code { overflow-wrap: anywhere; }
+  #__SIFT_ROOT__ .lens-scenarios { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  #__SIFT_ROOT__ .lens-scenarios > div { border: 1px solid #7776; border-radius: 8px; padding: 8px; min-width: 0; overflow-wrap: anywhere; }
+  #__SIFT_ROOT__ .lens-scenarios strong { display: block; }
+  #__SIFT_ROOT__ .lens-source-note { padding: 8px; border-left: 2px solid #7776; font-size: 12px; }
+  #__SIFT_ROOT__ .table-responsive { max-height: clamp(180px, 110vw, 560px); overflow: auto; }
   #__SIFT_ROOT__ thead th { position: sticky; top: 0; z-index: 1; background: #fff; }
   #__SIFT_ROOT__ .lens-label { display: block; font-weight: 650; }
   #__SIFT_ROOT__ .lens-value-badge { display: inline-block; margin: 4px 0; padding: 3px 7px; border: 1px solid currentColor; border-radius: 7px; font-size: 12px; line-height: 1.4; color: #805200; background: #fff4d6; }
   #__SIFT_ROOT__ .lens-value-badge[data-state="provisional"] { color: #075985; background: #e0f2fe; }
   #__SIFT_ROOT__ .lens-value-badge[data-state="held"] { color: #9f1239; background: #ffe4e6; }
   @media (prefers-color-scheme: dark) {
+    #__SIFT_ROOT__ .text-muted { color: #c4c4c4; }
+    #__SIFT_ROOT__ .lens-research-status { color: #f8d477; background: #3b2c14; }
+    #__SIFT_ROOT__ .viz-badge, #__SIFT_ROOT__ [data-select] { color: #123348; background: #8ddcfa; }
     #__SIFT_ROOT__ thead th { background: #171717; }
     #__SIFT_ROOT__ .lens-value-badge { color: #f8d477; background: #3b2c14; }
     #__SIFT_ROOT__ .lens-value-badge[data-state="provisional"] { color: #8ddcfa; background: #123348; }
     #__SIFT_ROOT__ .lens-value-badge[data-state="held"] { color: #fda4af; background: #431c2a; }
+    #__SIFT_ROOT__ .lens-overlap[data-multiple="true"] summary { color: #8ddcfa; background: #123348; }
+  }
+  @media (max-width: 480px) {
+    #__SIFT_ROOT__ .table thead { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); }
+    #__SIFT_ROOT__ .table tr { display: block; border-bottom: 1px solid #7778; padding: 8px 0; }
+    #__SIFT_ROOT__ .table td { display: block; border: 0; text-align: left; padding: 4px 8px; }
+    #__SIFT_ROOT__ .table td[data-mobile-label]::before { content: attr(data-mobile-label) ': '; font-size: 12px; opacity: .8; }
   }
   #__SIFT_ROOT__ [data-record-context], #__SIFT_ROOT__ [data-provenance], #__SIFT_ROOT__ [data-valuation-dates], #__SIFT_ROOT__ [data-valuation-identity], #__SIFT_ROOT__ [data-value] { overflow-wrap: anywhere; }
 </style>
@@ -64,6 +116,207 @@
   const gap = value => typeof value !== 'number' || !Number.isFinite(value) ? missing
     : value === 0 ? 'At current fair value' : `${(Math.abs(value) * 100).toFixed(1)}% ${value < 0 ? 'below' : 'above'}`;
   const string = value => typeof value === 'string' && value.length ? value : missing;
+  const methodBoard = Object.hasOwn(board, 'method_id');
+  const rows = methodBoard ? board.records : board.rows;
+  const metadata = board.methodology;
+  const methods = metadata?.schema === 'sift-methodology-consumer/v1' && metadata.status === 'AVAILABLE'
+    && Array.isArray(metadata.methods) ? metadata.methods : [];
+  const methodNames = Object.freeze({FVF_V5_8: 'Fair Value Framework 5.8', EGF_V1_4: 'Early Growth 1.4'});
+  const methodName = id => methodNames[id] || string(id);
+  const human = value => string(value).replaceAll('_', ' ').toLowerCase().replace(/^./, x => x.toUpperCase());
+  const validHash = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+  // Root contract clarification, October 4 00:15: only ADOPTED is affirmative.
+  // The Worker also validates the selected raw card's adoption and empty adoption_pending.
+  const approvedAdoptionStatuses = new Set(['ADOPTED']);
+  const adoptionLabel = status => status === 'ADOPTED' ? 'Adopted' : status === 'NOT_ADOPTED' ? 'Not adopted'
+    : status === 'NOT_ACTIVATED' ? 'Not activated' : 'Approval unavailable';
+  const rawCardAdopted = record => record?.raw_card_adoption?.status === 'ADOPTED'
+    && Array.isArray(record.raw_card_adoption.pending) && record.raw_card_adoption.pending.length === 0;
+  const rawAdoptionLabel = record => rawCardAdopted(record) ? 'Adopted'
+    : Array.isArray(record?.raw_card_adoption?.pending) && record.raw_card_adoption.pending.length > 0
+      ? 'Adoption checks pending' : record?.raw_card_adoption?.status === 'NOT_ADOPTED'
+        ? 'Not adopted' : 'Approval unavailable';
+  const analysisDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)
+    && Number.isFinite(Date.parse(value)) ? `${new Intl.DateTimeFormat('en-US', {dateStyle:'medium',timeZone:'UTC'}).format(new Date(value))} (UTC)` : 'Unavailable';
+  function boundSummary(record, ticker) {
+    if (!record || record.ticker !== ticker || record.company_id !== ticker) return false;
+    const matches = methods.filter(method => method.method_id === record.method_id);
+    if (matches.length !== 1) return false;
+    const method = matches[0];
+    return record.card_id === method.card_id && record.card_sha256 === method.card_sha256
+      && record.method_version === method.method_version && validHash(record.card_sha256)
+      && validHash(record.raw_sha256) && validHash(record.result_sha256)
+      && record.result_id === `framework-result:${record.result_sha256}:${record.method_id}`;
+  }
+  function countedQualification(record, ticker) {
+    const method = methods.find(method => method.method_id === record?.method_id);
+    return boundSummary(record, ticker) && approvedAdoptionStatuses.has(method.adoption_status)
+      && record.adoption_status === method.adoption_status && rawCardAdopted(record) && record.result_state === 'COMPLETE'
+      && record.acceptance?.status === 'ACCEPTED' && validHash(record.acceptance.receipt_sha256)
+      && record.acceptance.reviewed_raw_sha256 === record.raw_sha256
+      && record.selection?.qualification === 'QUALIFIED' && record.selection.conditional === false
+      && ['BUY', 'WAIT', 'AVOID'].includes(record.selection.conclusion)
+      && typeof record.selection.criteria_id === 'string' && record.selection.criteria_id.length > 0
+      && validHash(record.selection.policy_sha256);
+  }
+  function overlapData(row) {
+    const overlap = row.qualification_overlap;
+    if (!overlap || overlap.status !== 'AVAILABLE' || !Array.isArray(overlap.qualified)
+      || !Array.isArray(overlap.other_results) || !Array.isArray(overlap.missing_methods)
+      || !Number.isInteger(overlap.count) || overlap.count < 0 || overlap.count !== overlap.qualified.length
+      || overlap.qualified.length + overlap.other_results.length > methods.length) return null;
+    const seen = new Set();
+    for (const record of [...overlap.qualified, ...overlap.other_results]) {
+      if (!boundSummary(record, row.ticker) || seen.has(record.method_id)) return null;
+      seen.add(record.method_id);
+    }
+    if (!overlap.qualified.every(record => countedQualification(record, row.ticker))) return null;
+    if (overlap.other_results.some(record => countedQualification(record, row.ticker))) return null;
+    for (const method of overlap.missing_methods) {
+      if (!method || typeof method.method_id !== 'string' || seen.has(method.method_id)
+        || methods.filter(item => item.method_id === method.method_id).length !== 1) return null;
+      seen.add(method.method_id);
+    }
+    return overlap;
+  }
+  function appendText(parent, tag, value) {
+    const element = document.createElement(tag); element.textContent = value; parent.append(element); return element;
+  }
+  function renderOverlap(container, row) {
+    container.replaceChildren();
+    const overlap = overlapData(row);
+    if (!overlap) {
+      appendText(container, 'p', 'Lens overlap unavailable').className = 'text-small text-muted'; return;
+    }
+    const details = document.createElement('details'); details.className = 'lens-overlap';
+    details.dataset.multiple = String(overlap.count >= 2);
+    appendText(details, 'summary', overlap.count >= 2 ? `Qualifies in ${overlap.count} lenses`
+      : overlap.count === 1 ? 'Lens coverage · qualifies in 1 lens' : 'Lens coverage');
+    function list(title, records) {
+      if (!records.length) return;
+      appendText(details, 'h4', title);
+      const ul = document.createElement('ul');
+      for (const record of records) {
+        const li = document.createElement('li');
+        appendText(li, 'strong', `${methodName(record.method_id)} · ${string(record.selection?.conclusion)}`);
+        appendText(li, 'div', `Analysis ${analysisDate(record.analysis_at)}`).className = 'text-small';
+        appendText(li, 'div', `${human(record.result_state)} · ${human(record.acceptance?.status)} review${record.selection?.conditional ? ' · Conditional' : ''}`).className = 'text-small';
+        appendText(li, 'div', `${adoptionLabel(record.adoption_status)} · Qualification: ${human(record.selection?.qualification)}`).className = 'text-small';
+        if (!rawCardAdopted(record)) appendText(li, 'div', `Result-card approval: ${rawAdoptionLabel(record)}`).className = 'text-small';
+        const reasons = Array.isArray(record.selection?.reason_codes) ? record.selection.reason_codes : [];
+        if (reasons.length) appendText(li, 'div', reasons.map(human).join('; ')).className = 'text-small';
+        ul.append(li);
+      }
+      details.append(ul);
+    }
+    list('Independently qualifying lenses', overlap.qualified);
+    const contrasts = overlap.other_results.filter(record => ['WAIT', 'AVOID'].includes(record.selection?.conclusion)
+      && overlap.qualified.some(item => item.selection.conclusion === 'BUY'));
+    list('Different conclusions', contrasts);
+    list('Other delivered results', overlap.other_results.filter(record => !contrasts.includes(record)));
+    if (overlap.missing_methods.length) appendText(details, 'p', `Coverage unavailable: ${overlap.missing_methods.map(method => methodName(method.method_id)).join(', ')}.`).className = 'text-small';
+    appendText(details, 'p', 'Overlap is additional context, not a combined score or consensus. One supporting lens remains valid; incomplete or missing results do not count.').className = 'text-small';
+    container.append(details);
+  }
+  function renderMethodDetail(row) {
+    const container = find('[data-method-detail]'); container.replaceChildren();
+    const facts = document.createElement('dl'); facts.className = 'lens-method-facts';
+    for (const [label, value] of [
+      ['Method adoption', adoptionLabel(row.adoption_status)], ['Conclusion', human(row.selection?.conclusion)],
+      ['Result-card approval', rawAdoptionLabel(row)],
+      ['Result', human(row.result_state)], ['Financial/source review', human(row.acceptance?.status)],
+      ['Qualification', `${human(row.selection?.qualification)}${row.selection?.conditional ? ' · Conditional' : ''}`],
+      ['Analysis completed', analysisDate(row.analysis_at)], ['Analysis cutoff', analysisDate(row.cutoff)],
+    ]) {
+      const item = document.createElement('div'); appendText(item, 'dt', label); appendText(item, 'dd', value); facts.append(item);
+    }
+    container.append(facts);
+    const limitations = Array.isArray(row.limitations) ? row.limitations : [];
+    if (limitations.length) {
+      const details = document.createElement('details'); appendText(details, 'summary', 'Limitations and unavailable data');
+      const list = document.createElement('ul'); limitations.forEach(value => appendText(list, 'li', human(value))); details.append(list); container.append(details);
+    }
+    const research = payload.research;
+    if (research?.status === 'BOUND_REFERENCE' && research.result_id === row.result_id) {
+      const open = appendText(container, 'button', 'Valuation and entry references'); open.type = 'button'; open.className = 'btn'; open.dataset.researchOpen = '';
+      appendText(container, 'p', `Calculation reference only · ${human(research.completeness?.calculation_status)} · Generation-stage financial review: ${human(research.financial_acceptance)}. ${research.analyst?.kind === 'SYNTHETIC_TEST_FIXTURE' ? 'Synthetic software fixture; not financial evidence.' : ''}`).className = 'text-small';
+      open.addEventListener('click', () => renderResearch(row, research, open));
+    } else {
+      appendText(container, 'p', `Numerical detail unavailable · ${human(research?.status === 'BOUND_REFERENCE' ? 'EXACT_RESULT_NOT_PRELOADED' : research?.reason)}. Investigate to retrieve this exact method result through the assistant. The summary and lens coverage remain available.`).className = 'text-small';
+    }
+    const reference = document.createElement('details'); appendText(reference, 'summary', 'Result reference');
+    appendText(reference, 'p', string(row.result_id)); container.append(reference);
+  }
+  const sourceText = value => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, char => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`) : value == null ? 'Unavailable' : JSON.stringify(value);
+  function renderResearch(row, research, origin) {
+    const panel = find('[data-research-panel]'); panel.replaceChildren(); panel.hidden = false;
+    find('[data-method-detail]').hidden = true; find('[data-detail-overlap]').hidden = true;
+    const back = appendText(panel, 'button', '← Company summary'); back.type = 'button'; back.className = 'btn btn-ghost'; back.dataset.researchBack = '';
+    back.addEventListener('click', () => { panel.hidden = true; find('[data-method-detail]').hidden = false; find('[data-detail-overlap]').hidden = false; origin.focus(); });
+    const title = appendText(panel, 'h4', 'Valuation and entry references'); title.tabIndex = -1; title.dataset.researchTitle = '';
+    const callout = appendText(panel, 'div', ''); callout.className = 'lens-research-status';
+    appendText(callout, 'strong', research.analyst?.kind === 'SYNTHETIC_TEST_FIXTURE' ? 'Synthetic software fixture · not financial evidence' : 'Saved calculation reference · financial review applies');
+    const badges = appendText(callout, 'div', ''); badges.className = 'lens-status-badges';
+    for (const label of [human(research.completeness?.calculation_status), `Entry: ${human(research.entry?.status)}`, `Quote: ${human(research.quote?.status)}`, `Opening balances: ${research.entry?.opening_balances_verified === true ? 'Verified, as recorded' : 'Unverified'}`]) appendText(badges, 'span', label);
+    appendText(callout, 'p', `Generation-stage financial review: ${human(research.financial_acceptance)}`).className = 'text-small';
+    appendText(callout, 'p', `External review: ${human(row.acceptance?.status)} · date and scope not supplied here`).className = 'text-small';
+    appendText(callout, 'p', `Method complete: ${research.completeness?.methodology_complete === true ? 'Yes, as recorded' : research.completeness?.methodology_complete === false ? 'No' : 'Unavailable'} · Publication eligible: ${research.completeness?.publication_eligible === true ? 'Yes, as recorded' : research.completeness?.publication_eligible === false ? 'No' : 'Unavailable'}`).className = 'text-small';
+    appendText(callout, 'p', `Conclusion: ${human(research.decision?.conclusion)} · Board qualification: ${human(research.decision?.board_qualification)}`).className = 'text-small';
+    appendText(panel, 'p', `${string(research.route?.kind).replaceAll('_', '/')} · Cutoff ${string(row.cutoff)}. These references do not establish a current tradable value or qualifying pick.`).className = 'text-small';
+    appendText(panel, 'p', 'Amounts use 2-decimal HALF_EVEN display rounding, not declared research precision. Expand for exact source decimals.').className = 'text-small';
+    const disclosure = (label, parent = panel) => { const d = document.createElement('details'); appendText(d, 'summary', label); parent.append(d); return d; };
+    const fact = (parent, label, value) => { const p = document.createElement('p'); appendText(p, 'strong', `${label}: `); appendText(p, 'span', sourceText(value)); p.className = 'text-small'; parent.append(p); };
+    const compactDecimal = value => {
+      const negative = value.startsWith('-'), rounded = halfEven(negative ? value.slice(1) : value, 2);
+      return negative && rounded !== '0.00' ? '-' + rounded : rounded;
+    };
+    const amount = (source, currency) => source?.value == null ? `Unavailable · ${human(source?.reason)}` : !currency ? 'Unavailable · currency or financial basis not bound' : `${currency} ${compactDecimal(source.value)} per share`;
+    const exact = (parent, source, label, currency) => fact(parent, `${label} · exact source decimal${currency ? ' · ' + currency + ' per share' : ', units unconfirmed'}`, source?.value ?? `Unavailable · ${human(source?.reason)}`);
+    appendText(panel, 'h4', 'Current fundamental reference');
+    appendText(panel, 'p', amount(research.current?.central, research.current?.currency)).className = 'lens-value-badge';
+    appendText(panel, 'p', `As of ${string(research.current?.as_of)} · reference date ${string(research.current?.reference_date)}. Separate from the dated scenario targets below.`).className = 'text-small';
+    const fundamental = disclosure('Current reference · exact values and limitation');
+    exact(fundamental, research.current?.central, 'Central', research.current?.currency); exact(fundamental, research.current?.range?.low, 'Range low', research.current?.currency); exact(fundamental, research.current?.range?.high, 'Range high', research.current?.currency);
+    fact(fundamental, 'Method', human(research.current?.method)); fact(fundamental, 'Equity discount rate (fraction)', research.current?.equity_discount_rate); fact(fundamental, 'Limitation', research.current?.limitation);
+    appendText(panel, 'h4', 'Dated scenario targets');
+    appendText(panel, 'p', 'Saved research assumptions, not current fair value or a price forecast probability. Each target retains its own date and financial basis.').className = 'text-small';
+    if (!research.horizons.length) appendText(panel, 'p', 'No dated scenario targets supplied.');
+    for (const horizon of research.horizons) {
+      appendText(panel, 'p', `Target date ${string(horizon.date)}`).className = 'text-small';
+      const cards = document.createElement('div'); cards.className = 'lens-scenarios'; cards.dataset.scenarioCards = '';
+      for (const scenario of horizon.scenarios) { const card = document.createElement('div'); appendText(card, 'strong', human(scenario.name)); appendText(card, 'span', amount(scenario.amount, scenario.currency)); cards.append(card); }
+      panel.append(cards);
+      const basis = disclosure(`Scenario basis and source units · ${string(horizon.date)}`);
+      for (const scenario of horizon.scenarios) {
+        appendText(basis, 'h5', human(scenario.name));
+        exact(basis, scenario.amount, 'Recorded amount', scenario.currency);
+        if (scenario.reason) fact(basis, 'Display limit', human(scenario.reason));
+        const b = scenario.basis || {};
+        for (const [label, value] of [['Metric', human(b.metric)], ['Metric period', b.metric_period], ['Metric value', b.metric_value], ['Multiple', b.multiple], ['Accounting basis', b.accounting_basis], ['SBC basis', b.sbc_basis], ['Economic shares', b.economic_shares], ['Opening balances', scenario.opening_balance_source_status], ['Price return', b.price_return]]) fact(basis, label, value);
+      }
+    }
+    appendText(panel, 'h4', 'Entry reference · separate from qualification');
+    appendText(panel, 'p', `${human(research.entry?.status)} · Generation-stage review: ${human(research.entry?.financial_acceptance)} · Horizon ${string(research.entry?.horizon)}`).className = 'lens-value-badge';
+    const entry = document.createElement('dl'); entry.className = 'lens-method-facts';
+    for (const [label, source] of [['Conditional research ceiling', research.entry?.conditional], ['Policy-qualified entry', research.entry?.policy_qualified]]) { const item = document.createElement('div'); appendText(item, 'dt', label); appendText(item, 'dd', amount(source, research.entry?.currency)); entry.append(item); }
+    panel.append(entry);
+    const entryDetail = disclosure('Entry conditions and remaining checks');
+    for (const key of ['profile', 'binding_constraint', 'base_hurdle', 'stress_floor', 'funding_supported', 'opening_balances_verified']) fact(entryDetail, human(key), research.entry?.[key]);
+    exact(entryDetail, research.entry?.conditional, 'Conditional source amount', research.entry?.currency); exact(entryDetail, research.entry?.policy_qualified, 'Policy-qualified source amount', research.entry?.currency);
+    const checks = Array.isArray(research.completeness?.missing) ? research.completeness.missing : [];
+    const list = document.createElement('ul'); checks.forEach(item => appendText(list, 'li', human(item))); entryDetail.append(list);
+    const notes = disclosure('Saved assumptions · quoted source notes');
+    appendText(notes, 'p', 'These are retained analyst statements, not review decisions. Control characters are shown literally.').className = 'text-small';
+    for (const [key, value] of Object.entries(research.assumptions || {})) { appendText(notes, 'h5', human(key)); appendText(notes, 'p', sourceText(value)).className = 'lens-source-note'; }
+    const provenance = disclosure('Source dates and exact result binding');
+    fact(provenance, 'Detail retrieved', research.read_at); fact(provenance, 'Saved forecast authoring', research.analyst?.authored_at); fact(provenance, 'Temporal mode', research.analyst?.temporal_mode); fact(provenance, 'Case mode', research.case_mode);
+    appendText(provenance, 'p', 'Retrieval, publication, analysis cutoff and authoring dates are separate. Matching hashes verify identity, not financial acceptance or currentness.').className = 'text-small';
+    for (const source of research.sources) { fact(provenance, 'Source / role', `${source.id} · ${string(source.role)}`); source.dates.forEach(dates => { fact(provenance, 'Available', dates.available_at); fact(provenance, 'Observed', dates.observed_at); fact(provenance, 'Period', dates.period); }); }
+    fact(provenance, 'Result', row.result_id);
+    for (const [key, value] of Object.entries(research.binding)) fact(provenance, human(key), value);
+    for (const key of ['raw_sha256', 'input_sha256', 'forecast_input_sha256']) fact(provenance, human(key), research[key]);
+    title.focus();
+  }
   const corrected = board.valuation_display_contract === 'HORIZON-DISPLAY-1/r2';
   const basisLabels = Object.freeze({USD_PER_SHARE_EARNINGS_TIMES_PE: 'P/E',
     USD_PER_SHARE_EV_EBIT_MULTIPLE: 'EV/EBIT', USD_PER_SHARE_EV_EBITDA_MULTIPLE: 'EV/EBITDA',
@@ -106,15 +359,34 @@
   const readTime = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York',
     dateStyle: 'medium', timeStyle: 'long' }).format(new Date(payload.read_at));
   text('[data-snapshot]', `Published snapshot ${board.night} · board as of ${board.board_as_of}`);
-  text('[data-coverage]', `${counts.top_picks} Top Picks · ${counts.qualified_picks} Qualified Picks · ${counts.earlier_cases} earlier cases outside this view`);
-  text('[data-provenance]', `Source: installed Sift Lens board · retrieved ${readTime} · refresh status not supplied by this board response. Prices are dated; locked-close currency is not supplied by this response.`);
-  text('[data-valuation-notice]', corrected ? 'FAIR VALUE PROVISIONAL · independent financial review. Gaps compare the locked close with the same CURRENT BASE value, not an entry price.' : 'Valuation and gap under review; no source-bound current value is available in this response.');
+  text('[data-method-name]', methodBoard ? `Lens: ${methodName(board.method_id)}` : 'Overall published board · existing method');
+  text('[data-coverage]', methodBoard ? metadata?.status === 'AVAILABLE'
+    ? `${rows.length} delivered results in this lens. Incomplete results are included and labelled; these are not all picks.`
+    : `This lens is unavailable in this response. ${human(metadata?.reason)}.`
+    : `${counts.top_picks} Top Picks · ${counts.qualified_picks} Qualified Picks · ${counts.earlier_cases} earlier cases outside this view`);
+  text('[data-provenance]', `Source: installed Sift Lens board · retrieved ${readTime} · refresh status not supplied by this board response.${methodBoard ? ' Publication and analysis dates are distinct.' : ' Prices are dated; locked-close currency is not supplied by this response.'}`);
+  text('[data-valuation-notice]', methodBoard ? 'Each lens uses its own rules, assumptions and conclusions. No combined score or agreement requirement.' : corrected ? 'FAIR VALUE PROVISIONAL · independent financial review. Gaps compare the locked close with the same CURRENT BASE value, not an entry price.' : 'Valuation and gap under review; no source-bound current value is available in this response.');
+  if (methodBoard) {
+    text('[data-status-heading]', 'Lens conclusion / result status');
+    text('[data-last-heading]', 'Analysis completed');
+    text('[data-label-notice]', 'Qualification follows this lens’s own criteria. A completed analysis or business-quality check does not establish a pick.');
+  }
   let selected = null;
   const buttons = [];
   function select(row) {
     selected = row;
+    find('[data-research-panel]').hidden = true; find('[data-detail-overlap]').hidden = false;
+    find('[data-board-panel]').hidden = true;
+    find('[data-detail]').hidden = false;
     buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.ticker === row.ticker)));
-    text('[data-company]', `${row.ticker} · ${string(row.name)}`);
+    text('[data-company]', methodBoard ? `${row.ticker} · ${methodName(row.method_id)}` : `${row.ticker} · ${string(row.name)}`);
+    renderOverlap(find('[data-detail-overlap]'), row);
+    find('[data-legacy-detail]').hidden = methodBoard;
+    find('[data-method-detail]').hidden = !methodBoard;
+    text('[data-investigate]', `Investigate ${row.ticker}`);
+    find('[data-action-status]').hidden = true;
+    find('[data-company]').focus();
+    if (methodBoard) { renderMethodDetail(row); return; }
     text('[data-lock]', number(row.locked_close));
     text('[data-lock-date]', `Price lock ${string(row.lock_date)}`);
     const usable = selectedCurrent(row), places = precision(row);
@@ -133,35 +405,51 @@
     text('[data-investigate]', `Investigate ${row.ticker}`);
     find('[data-action-status]').hidden = true;
   }
-  board.rows.forEach(row => {
+  rows.forEach(row => {
     const fragment = find('[data-row-template]').content.cloneNode(true);
     const button = fragment.querySelector('[data-select]');
     button.textContent = row.ticker;
     button.dataset.ticker = row.ticker;
-    button.setAttribute('aria-label', `Inspect ${row.ticker} published record`);
+    button.setAttribute('aria-label', `Inspect ${row.ticker} ${methodBoard ? methodName(row.method_id) + ' result' : 'published record'}`);
     button.addEventListener('click', () => select(row));
-    fragment.querySelector('[data-name]').textContent = string(row.name);
-    fragment.querySelector('[data-label]').textContent = string(row.label);
-    const qualification = valuationStatus(row);
+    fragment.querySelector('[data-name]').textContent = methodBoard ? methodName(row.method_id) : string(row.name);
+    fragment.querySelector('[data-label]').textContent = methodBoard ? `Conclusion: ${string(row.selection?.conclusion)}` : string(row.label);
+    const qualification = methodBoard
+      ? {state: 'unavailable', label: `${human(row.result_state)} · ${human(row.acceptance?.status)} review`, detail: 'This lens result is separate from the overall board qualification.'}
+      : valuationStatus(row);
     const badge = fragment.querySelector('[data-valuation-status]');
     badge.textContent = qualification.label;
     badge.dataset.state = qualification.state;
     fragment.querySelector('[data-label-explanation]').textContent = qualification.detail;
-    fragment.querySelector('[data-gap]').textContent = selectedCurrent(row) ? `${gap(row.gap_to_current_fair_value)} · ${basisLabel(row)} basis` : missing;
+    fragment.querySelector('[data-gap]').textContent = methodBoard ? analysisDate(row.analysis_at)
+      : selectedCurrent(row) ? `${gap(row.gap_to_current_fair_value)} · ${basisLabel(row)} basis` : missing;
+    fragment.querySelector('[data-gap]').dataset.mobileLabel = methodBoard ? 'Analysis completed' : 'Gap to current fair value';
+    renderOverlap(fragment.querySelector('[data-row-overlap]'), row);
     buttons.push(button);
     find('[data-rows]').append(fragment);
   });
-  find('[data-detail]').hidden = board.rows.length === 0;
-  find('[data-empty]').hidden = board.rows.length !== 0;
-  if (board.rows.length) select(board.rows[0]);
+  find('[data-detail]').hidden = true;
+  find('[data-empty]').hidden = rows.length !== 0;
+  find('[data-company-instruction]').hidden = rows.length === 0;
+  find('[data-company-list]').hidden = rows.length === 0;
+  find('[data-back]').addEventListener('click', () => {
+    const origin = buttons.find(button => button.dataset.ticker === selected?.ticker);
+    selected = null;
+    buttons.forEach(button => button.setAttribute('aria-pressed', 'false'));
+    find('[data-detail]').hidden = true;
+    find('[data-board-panel]').hidden = false;
+    origin?.focus();
+  });
   find('[data-investigate]').addEventListener('click', async () => {
     if (!selected) return;
     const ticker = selected.ticker;
-    const prompt = `Using the installed Sift Lens connector, explain ${ticker}'s published valuation and what challenges it. Retrieve its company record, supporting research inputs and contrary evidence. Cite sources, preserve their dates and disclose unavailable material. The displayed board was snapshot ${board.night}; keep newer evidence and your interpretation distinct from that accepted core. Retrieval must not trigger a project stock-model run.`;
+    const prompt = methodBoard
+      ? `Using the installed Sift Lens connector, retrieve ${ticker}'s ${selected.method_id} result ${selected.result_id} through fetch, preserving its exact result identity and snapshot ${board.night}. Explain only this lens's delivered assumptions, valuation horizons, financial basis, entry conditions, conclusions and source dates; disclose incomplete, conditional, unaccepted or unavailable material. Do not borrow another methodology's rules or values or infer missing settings. Keep any other lens's disagreement and overall board qualification separate. The displayed fallback contains a summary and any explicitly preloaded bound research reference; full retrieval still uses the assistant. Retrieval must not trigger a project stock-model run.`
+      : `Using the installed Sift Lens connector, explain ${ticker}'s published valuation and what challenges it. Retrieve its company record, supporting research inputs and contrary evidence. Cite sources, preserve their dates and disclose unavailable material. The displayed board was snapshot ${board.night}; keep newer evidence and your interpretation distinct from that accepted core. Retrieval must not trigger a project stock-model run.`;
     const status = find('[data-action-status]');
     status.hidden = false;
     if (typeof window.openai?.sendFollowUpMessage !== 'function') {
-      status.textContent = `Chat follow-up is unavailable here. Ask in chat: explain ${ticker}'s valuation and contrary evidence using Sift Lens.`;
+      status.textContent = `Chat follow-up is unavailable here. Ask in chat: explain ${ticker}'s ${methodBoard ? selected.method_id + ' result ' + selected.result_id : 'valuation and contrary evidence'} using Sift Lens.`;
       return;
     }
     const button = find('[data-investigate]');

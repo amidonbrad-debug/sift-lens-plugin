@@ -46,6 +46,22 @@ Ordinary research questions do not require a visual.
 
 ## Choose the available research routes
 
+**Independent lenses:** when the installed tools expose `method_id`, use the returned methodology
+inventory to select the requested lens in `board`/`company`; keep its exact method and version.
+Each methodology has its own board, applicability, assumptions, financial basis, valuation horizons,
+entry conditions and conclusions. Retrieve a summary's exact `framework-result:…` reference with
+`fetch` for its full delivered result. Never relabel old research or borrow another method's rule,
+value or conclusion. A successful calculation is not a complete, independently accepted analysis.
+Keep the overall published board qualification separate. Different lenses may legitimately disagree.
+
+The additional “Qualifies in N lenses” badge uses Backend's explicit `qualification_overlap`,
+not narrative, BUY alone, business quality or mere analysis completion. Count each approved lens
+once, only for its COMPLETE, independently ACCEPTED, nonconditional qualifying result bound to the
+reviewed raw bytes and the method's selection policy. Show which lenses, their conclusions and
+analysis dates; disclose disagreements and missing or incomplete coverage. It does not create
+consensus, a blended score, a veto or a penalty for a stock supported by one lens. Unknown approval
+or contradictory overlap metadata cannot establish an affirmative badge.
+
 - **Published snapshot.** Use `board`/`night_results` for scope and publication night, `company`
   for the dated record, and `search` → `fetch` for matching saved material. `rules` explains the
   core vocabulary; read it once when first using core results. Tools may also return external
