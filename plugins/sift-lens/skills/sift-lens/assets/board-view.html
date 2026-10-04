@@ -4,7 +4,7 @@
     <span class="viz-badge">Experimental · fake-money research</span>
   </div>
   <p class="text-small lens-method-name" data-method-name></p>
-  <p class="text-small text-muted">Actual-data summary · full research opens in chat</p>
+  <p class="text-small text-muted" data-view-intro>Actual-data summary · full research opens in chat</p>
   <div data-board-panel>
   <p class="text-small text-muted" data-coverage></p>
   <p class="text-small" data-valuation-notice></p>
@@ -54,6 +54,13 @@
   #__SIFT_ROOT__ .viz-badge, #__SIFT_ROOT__ [data-select] { color: #fff; background: #075985; }
   #__SIFT_ROOT__ [data-research-back], #__SIFT_ROOT__ [data-back] { color: inherit; opacity: 1; font-weight: 600; }
   #__SIFT_ROOT__ .lens-method-name { font-weight: 700; }
+  #__SIFT_ROOT__ .lens-financial-summary { text-align: left; min-width: 0; margin: 8px 0; }
+  #__SIFT_ROOT__ .lens-financial-summary .lens-method-facts { margin: 8px 0; }
+  #__SIFT_ROOT__ .lens-financial-summary dd { font-weight: 650; color: #075985; }
+  #__SIFT_ROOT__ .lens-financial-summary details { border-top: 1px solid #7776; margin-top: 8px; }
+  #__SIFT_ROOT__ .lens-financial-summary summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+  #__SIFT_ROOT__ .lens-financial-summary p { margin: 6px 0; overflow-wrap: anywhere; }
+  #__SIFT_ROOT__[data-method-board] [data-view-intro], #__SIFT_ROOT__[data-method-board] [data-coverage], #__SIFT_ROOT__[data-method-board] [data-valuation-notice], #__SIFT_ROOT__[data-method-board] [data-company-instruction] { margin: 6px 0; }
   #__SIFT_ROOT__ .table { width: 100%; }
   #__SIFT_ROOT__ th, #__SIFT_ROOT__ td { overflow-wrap: anywhere; vertical-align: top; }
   #__SIFT_ROOT__ button, #__SIFT_ROOT__ summary { min-height: 44px; }
@@ -83,6 +90,7 @@
   #__SIFT_ROOT__ .lens-scenarios strong { display: block; }
   #__SIFT_ROOT__ .lens-source-note { padding: 8px; border-left: 2px solid #7776; font-size: 12px; }
   #__SIFT_ROOT__ .table-responsive { max-height: clamp(180px, 110vw, 560px); overflow: auto; }
+  #__SIFT_ROOT__[data-method-board] .table-responsive { max-height: clamp(360px, 150vw, 560px); }
   #__SIFT_ROOT__ thead th { position: sticky; top: 0; z-index: 1; background: #fff; }
   #__SIFT_ROOT__ .lens-label { display: block; font-weight: 650; }
   #__SIFT_ROOT__ .lens-value-badge { display: inline-block; margin: 4px 0; padding: 3px 7px; border: 1px solid currentColor; border-radius: 7px; font-size: 12px; line-height: 1.4; color: #805200; background: #fff4d6; }
@@ -91,6 +99,7 @@
   @media (prefers-color-scheme: dark) {
     #__SIFT_ROOT__ .text-muted { color: #c4c4c4; }
     #__SIFT_ROOT__ .lens-research-status { color: #f8d477; background: #3b2c14; }
+    #__SIFT_ROOT__ .lens-financial-summary dd { color: #8ddcfa; }
     #__SIFT_ROOT__ .viz-badge, #__SIFT_ROOT__ [data-select] { color: #123348; background: #8ddcfa; }
     #__SIFT_ROOT__ thead th { background: #171717; }
     #__SIFT_ROOT__ .lens-value-badge { color: #f8d477; background: #3b2c14; }
@@ -224,6 +233,8 @@
   }
   function renderMethodDetail(row) {
     const container = find('[data-method-detail]'); container.replaceChildren();
+    const state = appendText(container, 'p', `${human(row.result_state)} · ${human(row.acceptance?.status)} review`); state.className = 'lens-value-badge';
+    renderFinancialSummary(container, row);
     const facts = document.createElement('dl'); facts.className = 'lens-method-facts';
     for (const [label, value] of [
       ['Method adoption', adoptionLabel(row.adoption_status)], ['Conclusion', human(row.selection?.conclusion)],
@@ -251,6 +262,71 @@
     }
     const reference = document.createElement('details'); appendText(reference, 'summary', 'Result reference');
     appendText(reference, 'p', string(row.result_id)); container.append(reference);
+  }
+  function renderFinancialSummary(container, row) {
+    const box = appendText(container, 'section', ''); box.className = 'lens-financial-summary'; box.dataset.financialSummary = '';
+    box.setAttribute('aria-label', `${row.ticker} ${methodName(row.method_id)} financial summary`);
+    const summary = row.financial_summary;
+    const binding = summary?.binding;
+    const valid = boundSummary(row, row.ticker) && summary?.schema === 'sift-method-financial-summary/v1'
+      && binding && ['company_id','method_id','card_id','raw_sha256','result_id','cutoff'].every(key => binding[key] === row[key]);
+    const unavailable = reason => `Unavailable · ${human(reason || 'NOT_SUPPLIED')}`;
+    const reason = !summary ? 'FINANCIAL_SUMMARY_NOT_SUPPLIED' : !valid ? 'FINANCIAL_SUMMARY_BINDING_MISMATCH' : summary.reason;
+    if (!valid || summary.status !== 'VERIFIED') {
+      const badge = appendText(box, 'p', `Financial values ${unavailable(reason)}`); badge.className = 'lens-value-badge';
+      if (valid && Array.isArray(summary.refusals) && summary.refusals.length) {
+        const details = appendText(box, 'details', ''); appendText(details, 'summary', 'Why values are unavailable');
+        const list = appendText(details, 'ul', '');
+        for (const refusal of summary.refusals) {
+          const item = appendText(list, 'li', '');
+          appendText(item, 'strong', `${human(refusal.stage)} · ${human(refusal.code)}`);
+          if (refusal.what) appendText(item, 'p', string(refusal.what));
+          if (Array.isArray(refusal.fields)) appendText(item, 'p', refusal.fields.map(string).join('; '));
+          if (Array.isArray(refusal.upstream)) appendText(item, 'p', `Depends on: ${refusal.upstream.map(human).join('; ')}`);
+        }
+      }
+      return;
+    }
+    const decimal = value => typeof value === 'string' && value.length <= 160 && /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/.test(value);
+    const money = (value, currency, why) => {
+      if (!decimal(value)) return unavailable(why || (value == null ? 'NOT_SUPPLIED' : 'MALFORMED_DECIMAL'));
+      if (currency !== 'USD') return unavailable('CURRENCY_OR_FINANCIAL_BASIS_NOT_BOUND');
+      const negative = value.startsWith('-'), rounded = halfEven(negative ? value.slice(1) : value, 2);
+      return `${currency} ${negative && rounded !== '0.00' ? '-' : ''}${rounded}`;
+    };
+    const fact = (parent, label, value) => { const p = appendText(parent, 'p', ''); appendText(p, 'strong', `${label}: `); appendText(p, 'span', value); p.className = 'text-small'; };
+    const note = appendText(box, 'p', summary.synthetic ? 'Synthetic software fixture · not financial evidence' : 'Saved calculation · financial review applies'); note.className = 'lens-value-badge';
+    const facts = appendText(box, 'dl', ''); facts.className = 'lens-method-facts';
+    const price = summary.dated_price, current = summary.current_fundamental;
+    const quoted = price?.status === 'VERIFIED_INPUT_PAIR_NOT_INDEPENDENT_ACCEPTANCE' && /^\d{4}-\d{2}-\d{2}$/.test(price.session || '') && price.currency === summary.currency;
+    for (const [label, value, context] of [
+      ['Dated price', quoted ? money(price.price, price.currency, price.reason) : unavailable(price?.reason || 'QUOTE_NOT_VERIFIED'), quoted ? `Session ${price.session}` : 'Quote date unavailable'],
+      ['Current fundamental', current?.status === 'CALCULATED' ? money(current.central, summary.currency, current.reason) : unavailable(current?.reason || summary.reason), `As of ${string(current?.as_of)}`],
+    ]) { const item = appendText(facts, 'div', ''); appendText(item, 'dt', label); appendText(item, 'dd', value); appendText(item, 'p', context).className = 'text-small'; }
+    const details = appendText(box, 'details', ''); appendText(details, 'summary', 'Targets, basis and entry');
+    fact(details, 'Analysis cutoff', string(row.cutoff));
+    fact(details, 'Current fundamental range', current?.status === 'CALCULATED' ? `${money(current?.range?.low, summary.currency, current?.reason)} – ${money(current?.range?.high, summary.currency, current?.reason)}` : unavailable(current?.reason));
+    fact(details, 'Current method / reference date', `${human(current?.method)} · ${string(current?.reference_date)}`);
+    const horizons = Array.isArray(summary.future_market_targets) ? summary.future_market_targets : [];
+    if (!horizons.length) fact(details, 'Future market targets', unavailable(summary.reason));
+    for (const horizon of horizons) {
+      appendText(details, 'h4', `Future market target · ${string(horizon.date)}`);
+      for (const name of ['BEAR','BASE','BULL']) {
+        const scenario = horizon.scenarios?.[name];
+        fact(details, human(name), money(scenario?.value_per_share, scenario?.currency || summary.currency, scenario?.reason));
+        const period = scenario?.metric_period;
+        const periodText = period?.type === 'DURATION' ? `${string(period.start)} to ${string(period.end)}` : period?.type === 'INSTANT' ? string(period.end) : string(period);
+        fact(details, `${human(name)} basis`, `${human(scenario?.metric)} · ${periodText} · ${string(scenario?.accounting_basis)} · SBC ${human(scenario?.sbc_basis)}`);
+      }
+    }
+    const entry = summary.entry;
+    fact(details, 'Entry status', `${human(entry?.status)} · ${string(entry?.horizon)} · separate from qualification`);
+    fact(details, 'Conditional research ceiling', money(entry?.conditional_maximum_entry, summary.currency, entry?.reason));
+    fact(details, 'Policy-qualified entry', money(entry?.maximum_policy_qualified_entry, summary.currency, entry?.reason));
+    if (entry?.reason) fact(details, 'Entry limitation', human(entry.reason));
+    fact(details, 'External review', `${human(row.acceptance?.status)} · field scope and date unavailable`);
+    fact(details, 'Generation-stage financial review', human(summary.generation_financial_acceptance));
+    fact(details, 'Display precision', '2-decimal HALF_EVEN display default; exact values remain in research. Future targets are separate from current fundamental value.');
   }
   function renderSavedReport(container, row) {
     const exhibit = payload.report;
@@ -408,14 +484,17 @@
   text('[data-snapshot]', `Published snapshot ${board.night} · board as of ${board.board_as_of}`);
   text('[data-method-name]', methodBoard ? `Lens: ${methodName(board.method_id)}` : 'Overall published board · existing method');
   text('[data-coverage]', methodBoard ? metadata?.status === 'AVAILABLE'
-    ? `${rows.length} delivered results in this lens. Incomplete results are included and labelled; these are not all picks.`
+    ? `${rows.length} delivered results · incomplete results remain labelled.`
     : `This lens is unavailable in this response. ${human(metadata?.reason)}.`
     : `${counts.top_picks} Top Picks · ${counts.qualified_picks} Qualified Picks · ${counts.earlier_cases} earlier cases outside this view`);
   text('[data-provenance]', `Source: installed Sift Lens board · retrieved ${readTime} · refresh status not supplied by this board response.${methodBoard ? ' Publication and analysis dates are distinct.' : ' Prices are dated; locked-close currency is not supplied by this response.'}`);
-  text('[data-valuation-notice]', methodBoard ? 'Each lens uses its own rules, assumptions and conclusions. No combined score or agreement requirement.' : corrected ? 'FAIR VALUE PROVISIONAL · independent financial review. Gaps compare the locked close with the same CURRENT BASE value, not an entry price.' : 'Valuation and gap under review; no source-bound current value is available in this response.');
+  text('[data-valuation-notice]', methodBoard ? 'Independent lenses · separate conclusions.' : corrected ? 'FAIR VALUE PROVISIONAL · independent financial review. Gaps compare the locked close with the same CURRENT BASE value, not an entry price.' : 'Valuation and gap under review; no source-bound current value is available in this response.');
   if (methodBoard) {
+    root.dataset.methodBoard = '';
+    text('[data-view-intro]', 'Method results · not a pick ranking');
+    appendText(find('[data-view-context]'), 'p', 'Each lens uses its own rules, assumptions and conclusions. No combined score or agreement requirement.');
     text('[data-status-heading]', 'Lens conclusion / result status');
-    text('[data-last-heading]', 'Analysis completed');
+    text('[data-last-heading]', 'Financial summary');
     text('[data-label-notice]', 'Qualification follows this lens’s own criteria. A completed analysis or business-quality check does not establish a pick.');
   }
   let selected = null;
@@ -468,10 +547,13 @@
     badge.textContent = qualification.label;
     badge.dataset.state = qualification.state;
     fragment.querySelector('[data-label-explanation]').textContent = qualification.detail;
-    fragment.querySelector('[data-gap]').textContent = methodBoard ? analysisDate(row.analysis_at)
+    fragment.querySelector('[data-gap]').textContent = methodBoard ? `Analysis completed: ${analysisDate(row.analysis_at)}`
       : selectedCurrent(row) ? `${gap(row.gap_to_current_fair_value)} · ${basisLabel(row)} basis` : missing;
-    fragment.querySelector('[data-gap]').dataset.mobileLabel = methodBoard ? 'Analysis completed' : 'Gap to current fair value';
-    renderOverlap(fragment.querySelector('[data-row-overlap]'), row);
+    if (!methodBoard) fragment.querySelector('[data-gap]').dataset.mobileLabel = 'Gap to current fair value';
+    if (methodBoard) renderFinancialSummary(fragment.querySelector('[data-gap]'), row);
+    const overlapContainer = fragment.querySelector('[data-row-overlap]');
+    if (methodBoard && (overlapData(row)?.count || 0) < 2) fragment.querySelector('[data-gap]').append(overlapContainer);
+    renderOverlap(overlapContainer, row);
     buttons.push(button);
     find('[data-rows]').append(fragment);
   });
