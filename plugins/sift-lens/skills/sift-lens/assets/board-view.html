@@ -74,6 +74,10 @@
   #__SIFT_ROOT__ [data-research-panel] details { border-top: 1px solid #7776; margin-top: 12px; }
   #__SIFT_ROOT__ [data-research-panel] summary { padding: 10px 0; cursor: pointer; font-weight: 600; }
   #__SIFT_ROOT__ [data-research-panel] p, #__SIFT_ROOT__ [data-research-panel] dd, #__SIFT_ROOT__ [data-research-panel] code { overflow-wrap: anywhere; }
+  #__SIFT_ROOT__ .lens-saved-report { min-width: 0; overflow-wrap: anywhere; }
+  #__SIFT_ROOT__ .lens-saved-report details { border-top: 1px solid #7776; margin-top: 8px; }
+  #__SIFT_ROOT__ .lens-saved-report summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+  #__SIFT_ROOT__ .lens-saved-report .lens-report-text { white-space: pre-wrap; line-height: 1.6; }
   #__SIFT_ROOT__ .lens-scenarios { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   #__SIFT_ROOT__ .lens-scenarios > div { border: 1px solid #7776; border-radius: 8px; padding: 8px; min-width: 0; overflow-wrap: anywhere; }
   #__SIFT_ROOT__ .lens-scenarios strong { display: block; }
@@ -236,6 +240,7 @@
       const details = document.createElement('details'); appendText(details, 'summary', 'Limitations and unavailable data');
       const list = document.createElement('ul'); limitations.forEach(value => appendText(list, 'li', human(value))); details.append(list); container.append(details);
     }
+    renderSavedReport(container, row);
     const research = payload.research;
     if (research?.status === 'BOUND_REFERENCE' && research.result_id === row.result_id) {
       const open = appendText(container, 'button', 'Valuation and entry references'); open.type = 'button'; open.className = 'btn'; open.dataset.researchOpen = '';
@@ -246,6 +251,48 @@
     }
     const reference = document.createElement('details'); appendText(reference, 'summary', 'Result reference');
     appendText(reference, 'p', string(row.result_id)); container.append(reference);
+  }
+  function renderSavedReport(container, row) {
+    const exhibit = payload.report;
+    if (exhibit?.status !== 'BOUND_REPORT' || exhibit.result_id !== row.result_id) {
+      appendText(container, 'p', `Saved report unavailable · ${human(exhibit?.status === 'BOUND_REPORT' ? 'EXACT_RESULT_NOT_PRELOADED' : exhibit?.reason)}. Investigate to retrieve this exact method result.`).className = 'text-small';
+      return;
+    }
+    const report = exhibit.report, panel = appendText(container, 'section', '');
+    panel.className = 'lens-saved-report'; panel.dataset.savedReport = ''; panel.setAttribute('aria-label', 'Saved methodology report');
+    appendText(panel, 'h4', 'Methodology report');
+    const callout = appendText(panel, 'div', ''); callout.className = 'lens-research-status';
+    const badges = appendText(callout, 'div', ''); badges.className = 'lens-status-badges';
+    appendText(badges, 'span', report.section_coverage === 'ALL_SUPPLIED_NOT_VERIFIED' ? 'All sections supplied · unverified' : 'Partial report');
+    appendText(callout, 'p', 'Financial review was not performed when this report was saved.').className = 'text-small';
+    appendText(callout, 'p', report.claimed_conclusion === 'UNAVAILABLE' ? 'No analyst conclusion supplied.' : `Analyst claim: ${human(report.claimed_conclusion)} · not accepted.`).className = 'text-small';
+    if (report.analyst.kind === 'SYNTHETIC_TEST_FIXTURE') appendText(callout, 'strong', 'Synthetic software fixture · not financial evidence');
+    const disclosure = (label, parent = panel) => { const d = appendText(parent, 'details', ''); appendText(d, 'summary', label); return d; };
+    const fact = (parent, label, value) => { const p = appendText(parent, 'p', ''); p.className = 'text-small'; appendText(p, 'strong', label + ': '); appendText(p, 'span', sourceText(value)); };
+    const names = ['Decision', 'Dashboard', 'Three assumptions', 'What the price requires', 'Catalysts and breaks', 'Verification', 'Historical context'];
+    const firstAvailable = report.sections.findIndex(section => section.status !== 'UNAVAILABLE');
+    for (const [index, section] of report.sections.entries()) {
+      const label = `${names[index]} · ${human(section.status)}`;
+      const block = disclosure(label); block.open = index === firstAvailable;
+      block.dataset.reportSection = section.section;
+      appendText(block, 'p', section.text).className = 'lens-report-text';
+      if (section.status !== 'UNAVAILABLE') {
+        const context = disclosure('Section sources and original gate', block);
+        for (const key of ['source_fact_ids', 'applicability', 'policy', 'gate_status', 'upstream', 'item_ids']) fact(context, human(key), section[key]);
+      } else {
+        fact(block, 'Applicability', section.applicability); fact(block, 'Original gate', section.gate_status);
+      }
+    }
+    const provenance = disclosure('Report provenance · author, dates and source limits'); provenance.dataset.reportProvenance = '';
+    appendText(provenance, 'p', 'Author identity and receipt hashes are caller declarations requiring independent authentication. Bound source hashes establish identity, not financial acceptance.').className = 'text-small';
+    for (const [label, value] of [['Result state', row.result_state], ['Section coverage', report.section_coverage], ['Generation-stage financial review', report.financial_acceptance], ['Methodology complete', report.methodology_complete], ['Publication eligible', report.publication_eligible], ['Claimed conclusion', report.claimed_conclusion], ['Effective conclusion', report.effective_conclusion], ['Identity authentication', report.identity_authentication], ['Author', report.analyst.name], ['Author type', report.analyst.kind], ['Authored at', report.analyst.authored_at], ['Source completed at', report.analyst.source_completed_at], ['Assembled at', report.analyst.assembled_at], ['Analysis cutoff', row.cutoff], ['Temporal mode', report.analyst.temporal_mode], ['Original context', report.analyst.note], ['Declared evidence', report.analyst.evidence], ['Report input SHA-256', exhibit.input_sha256], ['Exact result raw SHA-256', exhibit.raw_sha256], ['Retrieved at', exhibit.read_at]]) fact(provenance, label, value);
+    for (const limit of report.limitations) appendText(provenance, 'p', limit).className = 'lens-report-text';
+    for (const source of Object.values(report.sources)) { fact(provenance, 'Source', source.fact_id); fact(provenance, 'Source limitations', source.limitations); fact(provenance, 'Source dates', exhibit.source_dates.find(item => item.id === source.fact_id)); }
+    const gaps = disclosure(`Incomplete coverage · ${report.missing.filter(item => item.startsWith('section:')).length} section gaps · ${report.missing.filter(item => item.startsWith('requirement:')).length} requirements`);
+    const list = appendText(gaps, 'ul', ''); for (const value of report.missing) appendText(list, 'li', human(value));
+    fact(gaps, 'Supplied requirement records', report.requirements);
+    const original = disclosure(`Original gates and refusals · ${report.upstream_refusals.length} refusals`);
+    fact(original, 'Original report', exhibit.original_report); fact(original, 'Original stages', exhibit.original_stages); fact(original, 'Upstream refusals', report.upstream_refusals);
   }
   const sourceText = value => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g, char => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`) : value == null ? 'Unavailable' : JSON.stringify(value);
   function renderResearch(row, research, origin) {
