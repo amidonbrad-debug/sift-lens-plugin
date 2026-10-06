@@ -105,6 +105,162 @@ def bound_method_result(board, raw, read_at):
     return row, result, case, cards, shared
 
 
+ENTRY_POLICY_ID = "FVF-5.8-entry-20261004-v1"
+GROWTH_NATURE = "DESCRIPTIVE_ONLY_NOT_A_RANK_GATE_PROBABILITY_OR_VALUATION_INPUT"
+
+
+def checked_entry(entry, binding, input_policy):
+    """Shape/provenance checks only; never compute an entry or range."""
+    try:
+        require(isinstance(entry, dict), "ENTRY_MALFORMED")
+        if "policy" not in entry:
+            require(entry.get("profile") != ENTRY_POLICY_ID and entry.get("binding_constraint") != "EQUAL"
+                    and "valuation_date" not in entry and "state" not in entry.get("accumulation_zone", {}), "ENTRY_POLICY_BINDING_MISSING")
+            return {**entry, "policy_label": "Entry policy not supplied" if not entry.get("profile") or entry.get("reason") in
+                    ("CARD_ENTRY_POLICY_NOT_SPECIFIED", "ENTRY_POLICY_MISSING") else "Earlier entry policy" if binding.get("card_id") == "FVF_V5_8/card-r1" else "Recorded entry policy"}
+        policy, zone = entry["policy"], entry.get("accumulation_zone")
+        require(isinstance(policy, dict) and policy.get("policy_id") == ENTRY_POLICY_ID
+                and (entry.get("profile") == ENTRY_POLICY_ID or entry.get("status") == "UNAVAILABLE" and "profile" not in entry)
+                and binding.get("card_id") == "FVF_V5_8/card-r1" and digest(policy.get("policy_sha256")), "ENTRY_POLICY_BINDING_UNSUPPORTED")
+        require(isinstance(policy.get("registered_at"), str) and datetime.fromisoformat(policy["registered_at"].replace("Z", "+00:00")).tzinfo is not None,
+                "ENTRY_POLICY_BINDING_UNSUPPORTED")
+        require(date.fromisoformat(entry["valuation_date"]).isoformat() == entry["valuation_date"] == binding["cutoff"][:10], "ENTRY_VALUATION_DATE_MISMATCH")
+        require(isinstance(input_policy, dict) and input_policy.get("profile") == ENTRY_POLICY_ID and input_policy.get("base_hurdle") == "0.18"
+                and input_policy.get("stress_floor") == "0.05" and input_policy.get("accumulation_hurdles") == ["0.22", "0.25"], "ENTRY_INPUT_POLICY_MISMATCH")
+        origin = date.fromisoformat(entry["valuation_date"])
+        try:
+            horizon = origin.replace(year=origin.year + 5)
+        except ValueError:
+            horizon = origin.replace(year=origin.year + 5, day=28)
+        require(input_policy.get("horizon") == horizon.isoformat()
+                and ("horizon" not in entry or entry["horizon"] == input_policy["horizon"]), "ENTRY_POLICY_HORIZON_MISMATCH")
+        require(entry.get("status") in ("POLICY_QUALIFIED", "CONDITIONAL", "UNAVAILABLE") and isinstance(zone, dict)
+                and zone.get("state") in ("FULL", "TRUNCATED_BY_CONTROLLING_MAXIMUM", "EMPTY", "UNAVAILABLE"), "ENTRY_POLICY_STATE_UNSUPPORTED")
+        if entry["status"] == "UNAVAILABLE":
+            require(isinstance(entry.get("reason"), str) and entry["reason"] and zone["state"] == "UNAVAILABLE"
+                    and zone.get("reason") == entry["reason"] and zone.get("low") is None and zone.get("high") is None, "ENTRY_UNAVAILABLE_STATE_MISMATCH")
+            uncut = zone.get("base_only")
+            require(uncut is None or isinstance(uncut, dict) and all(decimal_source(uncut.get(k))["value"] is not None for k in ("low", "high")),
+                    "ENTRY_BASE_RANGE_UNSUPPORTED")
+        else:
+            require(entry.get("horizon") == input_policy["horizon"], "ENTRY_POLICY_HORIZON_MISSING")
+            valid = lambda value: decimal_source(value)["value"] is not None
+            require(valid(entry.get("elapsed_years")) and entry.get("base_hurdle") == "0.18" and entry.get("stress_floor") == "0.05"
+                    and entry.get("accumulation_hurdles") == ["0.22", "0.25"]
+                    and all(valid(entry.get(k)) for k in ("base_return_ceiling", "stress_ceiling", "conditional_maximum_entry"))
+                    and (valid(entry.get("maximum_policy_qualified_entry")) if entry["status"] == "POLICY_QUALIFIED" else entry.get("maximum_policy_qualified_entry") is None)
+                    and entry.get("binding_constraint") in ("BASE_RETURN", "STRESS", "EQUAL"), "ENTRY_POLICY_VALUES_UNSUPPORTED")
+            require(entry["status"] != "POLICY_QUALIFIED" or entry.get("maximum_policy_qualified_entry") == entry.get("conditional_maximum_entry"), "ENTRY_MAXIMUM_COPIES_MISMATCH")
+            require(entry.get("binding_constraint") != "EQUAL" or entry.get("base_return_ceiling") == entry.get("stress_ceiling"), "ENTRY_EQUAL_CLAIM_MISMATCH")
+            uncut = zone.get("base_only")
+            require(isinstance(uncut, dict) and valid(uncut.get("low")) and valid(uncut.get("high")), "ENTRY_BASE_RANGE_MISSING")
+            require((zone.get("low") is None and zone.get("high") is None and zone.get("reason") == "DISAPPOINTMENT_CEILING_BELOW_RANGE")
+                    if zone["state"] == "EMPTY" else zone["state"] in ("FULL", "TRUNCATED_BY_CONTROLLING_MAXIMUM")
+                    and valid(zone.get("low")) and valid(zone.get("high")) and zone.get("reason") ==
+                    (None if zone["state"] == "FULL" else "DISAPPOINTMENT_CEILING_BELOW_RANGE_TOP"), "ENTRY_RANGE_STATE_MISMATCH")
+        return {**entry, "policy_label": "FVF 5.8 entry policy"}
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return {"status": "UNAVAILABLE", "reason": "ENTRY_POLICY_PROVENANCE_OR_SHAPE_UNSUPPORTED", "policy_label": "Entry policy unavailable"}
+
+
+def growth_decimal_ordered(low, high):
+    """Compare saved decimal endpoints exactly; never calculate CAGR or buckets."""
+    if decimal_source(low)["value"] is None or decimal_source(high)["value"] is None:
+        return False
+    values = [value.split(".") for value in (low, high)]
+    scale = max(len(parts[1]) if len(parts) == 2 else 0 for parts in values)
+    units = [int(parts[0] + (parts[1] if len(parts) == 2 else "").ljust(scale, "0")) for parts in values]
+    return units[0] <= units[1]
+
+
+def growth_sidecar(board, raw, read_at):
+    """Independently bound descriptive receipt. Entry validity is unrelated."""
+    try:
+        row, result, case, cards, shared = bound_method_result(board, raw, read_at)
+        g, f = shared.get("saved_growth_strength"), shared.get("saved_forecast")
+        require(g is not None, "GROWTH_STRENGTH_NOT_SUPPLIED")
+        require(isinstance(g, dict) and isinstance(f, dict), "GROWTH_STRENGTH_MALFORMED")
+        b, summary = g.get("binding"), g.get("summary")
+        expected = {"case": row["ticker"], "cutoff": row["cutoff"], "card_id": row["card_id"],
+                    "card_sha256": row["card_sha256"], "text_sha256": cards[0].get("text_sha256"),
+                    "package_sha256": result.get("engine", {}).get("package_sha256"),
+                    **{k: case.get(k) for k in ("manifest_sha256", "facts_sha256", "expected_sha256")}}
+        require(isinstance(b, dict) and b == f.get("binding") and b.get("card_id") == "FVF_V5_8/card-r1"
+                and all(isinstance(v, str) and v and b.get(k) == v and (not k.endswith("sha256") or digest(v)) for k, v in expected.items())
+                and digest(b.get("source_result_sha256")) and digest(f.get("input_sha256")) and g.get("forecast_input_sha256") == f["input_sha256"], "GROWTH_STRENGTH_BINDING_MISMATCH")
+        inputs = []
+        for receipt, schema in ((g, "ai-trading-pilot/growth-strength-input/v1"), (f, "ai-trading-pilot/saved-analyst-forecast/v1")):
+            require(isinstance(receipt.get("input_json"), str) and len(receipt["input_json"].encode()) <= 1_000_000 and digest(receipt.get("input_sha256"))
+                    and hashlib.sha256(receipt["input_json"].encode()).hexdigest() == receipt["input_sha256"], "GROWTH_INPUT_DIGEST_MISMATCH")
+            inp = strict_json(receipt["input_json"])
+            require(inp.get("schema") == schema and inp.get("binding") == b, "GROWTH_INPUT_BINDING_MISMATCH")
+            inputs.append(inp)
+        require(inputs[0].get("forecast_input_sha256") == f["input_sha256"] and inputs[1].get("scenarios") == f.get("scenarios")
+                and isinstance(inputs[1].get("analyst"), dict) and isinstance(f.get("analyst"), dict)
+                and all(f["analyst"].get(k) == val for k, val in inputs[1]["analyst"].items())
+                and g.get("status") == "CALCULATED_FROM_SAVED_JUDGMENT_NOT_FINANCIALLY_ACCEPTED" and f.get("status") == "SAVED_JUDGMENT_NOT_FINANCIALLY_ACCEPTED"
+                and g.get("financial_acceptance") == f.get("financial_acceptance") == "NOT_PERFORMED", "GROWTH_RECEIPT_STATE_UNSUPPORTED")
+        rubric = g.get("rubric")
+        require(isinstance(rubric, dict) and rubric.get("rubric_id") == "FVF_V5_8/growth-strength-3A-r1" and digest(rubric.get("rubric_sha256"))
+                and isinstance(summary, dict) and summary.get("rubric_id") == rubric["rubric_id"] and summary.get("nature") == GROWTH_NATURE, "GROWTH_RUBRIC_UNSUPPORTED")
+        require(summary.get("maximum") == 10 and summary.get("status") in ("SCORED", "NOT_SCORED")
+                and (type(summary.get("total")) is int and 0 <= summary["total"] <= 10 and summary.get("descriptor") in ("Weak", "Moderate", "Strong", "Exceptional", "Rare / explosive")
+                     if summary["status"] == "SCORED" else summary.get("total") is None and summary.get("descriptor") is None
+                     and isinstance(summary.get("not_scored_reason"), str) and summary["not_scored_reason"])
+                and type(summary.get("provisional")) is bool and summary.get("measurement_basis") in
+                ("VERIFIED_ORGANIC", "BOUNDED_ORGANIC", "PROVISIONAL_REPORTED", "REGISTERED_SUBSTITUTE", "UNAVAILABLE")
+                and summary.get("evidence_label") in ("SUPPORTED", "EMERGING", "UNSUPPORTED"), "GROWTH_SUMMARY_UNSUPPORTED")
+        maxima = {"GROWTH_MAGNITUDE": 4, "ACCELERATION_EXECUTION": 2, "DURABILITY": 2, "SHAREHOLDER_CAPTURE": 2}
+        parts = summary.get("components")
+        require(isinstance(parts, list) and len(parts) == 4 and len({x.get("name") for x in parts}) == 4, "GROWTH_COMPONENTS_UNSUPPORTED")
+        for part in parts:
+            ids = part.get("source_fact_ids")
+            require(part.get("name") in maxima and part.get("max") == maxima[part["name"]] and part.get("status") in ("SCORED", "NOT_SCORED")
+                    and (type(part.get("score")) is int and 0 <= part["score"] <= part["max"] if part["status"] == "SCORED" else part.get("score") is None)
+                    and isinstance(part.get("rationale"), str) and isinstance(ids, list) and (part["status"] != "SCORED" or ids) and len(set(ids)) == len(ids)
+                    and all(isinstance(key, str) and len([fact for fact in shared["facts"] if fact.get("id") == key]) == 1 for key in ids)
+                    and (part.get("missing_evidence_reason") is None if part["status"] == "SCORED" else isinstance(part.get("missing_evidence_reason"), str)
+                         and part["missing_evidence_reason"]), "GROWTH_COMPONENT_SOURCE_UNSUPPORTED")
+        require(all(x["status"] == "SCORED" for x in parts) and summary.get("not_scored_reason") is None if summary["status"] == "SCORED"
+                else any(x["status"] == "NOT_SCORED" for x in parts), "GROWTH_PARTIAL_STATE_MISMATCH")
+        # Check coherence of producer-owned outputs without replacing them.
+        if summary["status"] == "SCORED":
+            total = summary["total"]
+            descriptor = "Weak" if total <= 2 else "Moderate" if total <= 4 else "Strong" if total <= 6 else "Exceptional" if total <= 8 else "Rare / explosive"
+            require(sum(part["score"] for part in parts) == total and summary["descriptor"] == descriptor, "GROWTH_TOTAL_OR_DESCRIPTOR_MISMATCH")
+        organic_range, sensitivity = summary.get("organic_equivalent_score_range"), summary.get("adjustment_sensitivity")
+        require("organic_equivalent_score_range" in summary and isinstance(sensitivity, str) and sensitivity and
+                (sensitivity in ("UNQUANTIFIED", "NOT_NEEDED") if organic_range is None else isinstance(organic_range, dict)
+                 and type(organic_range.get("low")) is int and type(organic_range.get("high")) is int
+                 and 0 <= organic_range["low"] <= organic_range["high"] <= 10
+                 and sensitivity not in ("UNQUANTIFIED", "NOT_NEEDED")), "GROWTH_ORGANIC_RANGE_UNSUPPORTED")
+        calculation = summary.get("growth_calculation")
+        magnitude = next(part for part in parts if part["name"] == "GROWTH_MAGNITUDE")
+        if calculation is None:
+            require(summary["status"] == magnitude["status"] == "NOT_SCORED", "GROWTH_CALCULATION_MISSING")
+        else:
+            require(isinstance(calculation, dict), "GROWTH_CALCULATION_UNSUPPORTED")
+            if "cagr_low" in calculation or "cagr_high" in calculation:
+                require("cagr" not in calculation and growth_decimal_ordered(calculation.get("cagr_low"), calculation.get("cagr_high")), "GROWTH_CALCULATION_RANGE_UNSUPPORTED")
+            else:
+                start, end = calculation.get("start_period_end"), calculation.get("end_period_end")
+                require(isinstance(start, str) and isinstance(end, str) and date.fromisoformat(start).isoformat() == start
+                        and date.fromisoformat(end).isoformat() == end and start < end
+                        and all(decimal_source(calculation.get(key))["value"] is not None for key in ("start_value", "end_value", "elapsed_years", "cagr")), "GROWTH_CALCULATION_UNSUPPORTED")
+        require(summary.get("direction") in ("ACCELERATING", "SUSTAINING", "DECELERATING", "NOT_ASSESSABLE")
+                and summary.get("execution_vs_expectations") in ("EXCEEDING", "MEETING", "MISSING", "INSUFFICIENT_DATA")
+                and isinstance(summary.get("durability_note"), str) and (summary["measurement_basis"] == "PROVISIONAL_REPORTED"
+                and isinstance(summary.get("provisional_reason"), str) and summary["provisional_reason"] if summary["provisional"] else summary.get("provisional_reason") is None), "GROWTH_CONTEXT_UNSUPPORTED")
+        analyst = f["analyst"]
+        synthetic = (analyst.get("kind") == "SYNTHETIC_TEST_FIXTURE" or analyst.get("provenance_assessment", {}).get("origin") == "SYNTHETIC_TEST_FIXTURE"
+                     or analyst.get("provenance_assessment", {}).get("execution_status") == "SYNTHETIC_TEST_FIXTURE_NO_MODEL_CALL"
+                     or analyst.get("model_provenance", {}).get("origin") == "SYNTHETIC_TEST_FIXTURE")
+        ids = {key for part in parts for key in part["source_fact_ids"]}
+        return {**summary, "synthetic": synthetic, "source_facts": [fact for fact in shared["facts"] if fact.get("id") in ids], "binding": b, "rubric": rubric, "input_sha256": g["input_sha256"], "forecast_input_sha256": g["forecast_input_sha256"], "financial_acceptance": g["financial_acceptance"]}
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return {"status": "UNAVAILABLE", "reason": "GROWTH_STRENGTH_NOT_SUPPLIED" if raw is None or 'g' in locals() and g is None else "GROWTH_PROVENANCE_OR_SHAPE_UNSUPPORTED", "total": None}
+
+
 def research_sidecar(board, raw, read_at):
     if raw is None:
         return {"status": "UNAVAILABLE", "reason": "EXACT_RESULT_NOT_PRELOADED"}
@@ -120,6 +276,12 @@ def research_sidecar(board, raw, read_at):
             require(inp.get("schema") == schema, "INPUT_SCHEMA_MISMATCH")
             inputs.append(inp)
         vi, fi = inputs
+        require(v.get("status") == "CALCULATED_FROM_SAVED_JUDGMENT_NOT_FINANCIALLY_ACCEPTED"
+                and f.get("status") == "SAVED_JUDGMENT_NOT_FINANCIALLY_ACCEPTED"
+                and v.get("financial_acceptance") == f.get("financial_acceptance") == "NOT_PERFORMED"
+                and isinstance(v.get("completeness"), dict) and v["completeness"].get("methodology_complete") is False
+                and v["completeness"].get("publication_eligible") is False and isinstance(v["completeness"].get("missing"), list)
+                and vi.get("assumptions") == v.get("assumptions") and fi.get("scenarios") == f.get("scenarios"), "NUMERICAL_RECEIPT_STATE_UNSUPPORTED")
         binding = v.get("binding")
         require(isinstance(binding, dict) and binding == f.get("binding") == vi.get("binding") == fi.get("binding")
                 and v.get("forecast_input_sha256") == vi.get("forecast_input_sha256") == f["input_sha256"], "NUMERICAL_CROSS_BINDING_MISMATCH")
@@ -171,7 +333,7 @@ def research_sidecar(board, raw, read_at):
                     "opening_balance_source_status": scenario.get("funding", {}).get("opening_balance_source_status")})
             projected.append({"date": horizon.get("date"), "scenarios": scenarios})
         current = v.get("current_fundamental", {})
-        entry = v.get("entry", {})
+        entry = checked_entry(v.get("entry", {}), binding, vi.get("entry_policy"))
         def horizon_currency(reference_date):
             matching = [h for h in projected if h["date"] == reference_date]
             currencies = [s["currency"] for h in matching for s in h["scenarios"]]
@@ -191,7 +353,7 @@ def research_sidecar(board, raw, read_at):
                 "current": {**{k: current.get(k) for k in ("status", "as_of", "reference_date", "method", "limitation", "equity_discount_rate")},
                     "central": decimal_source(current.get("central")), "range": {k: decimal_source(current.get("range", {}).get(k)) for k in ("low", "high")}, "currency": current_currency},
                 "horizons": projected,
-                "entry": {**{k: entry.get(k) for k in ("status", "financial_acceptance", "horizon", "profile", "binding_constraint", "funding_supported", "opening_balances_verified", "base_hurdle", "stress_floor")},
+                "entry": {**entry,
                     "conditional": decimal_source(entry.get("conditional_maximum_entry")), "policy_qualified": decimal_source(entry.get("maximum_policy_qualified_entry")), "currency": entry_currency},
                 "assumptions": {"valuation": v.get("assumptions"), "forecast": f.get("assumptions"), "current_rationale": current.get("rationale"), "entry_note": entry.get("note")}, "sources": sources}
     except (ValueError, TypeError, KeyError, AttributeError, IndexError) as exc:
@@ -400,6 +562,7 @@ def render(raw: bytes, read_at: str, method_result: bytes | None = None, method_
                 raise ValueError("invalid financial number")
     payload = json.dumps({"board": value, "read_at": read_at,
                           "research": research_sidecar(value, method_result, method_result_read_at),
+                          "growth": growth_sidecar(value, method_result, method_result_read_at),
                           "report": report_sidecar(value, method_result, method_result_read_at)}, ensure_ascii=True, allow_nan=False,
                          separators=(",", ":"))
     # JSON remains data even if a retained text field contains HTML/script delimiters.

@@ -7,7 +7,7 @@
   <p class="text-small text-muted" data-view-intro>Actual-data summary · full research opens in chat</p>
   <div data-board-panel>
   <p class="text-small text-muted" data-coverage></p>
-  <p class="text-small" data-valuation-notice></p>
+  <p class="text-small" data-valuation-notice></p><p class="text-small" data-display-order></p>
   <details class="text-small" data-view-context><summary>About this view</summary>
   <p>This fallback contains one retrieved board. Full research and other lens views open through your assistant.</p>
   <p class="text-small" data-label-notice>Published labels reflect the recorded research assessment. They do not confirm current fair value or completed financial review.</p>
@@ -57,6 +57,10 @@
   #__SIFT_ROOT__ .lens-financial-summary { text-align: left; min-width: 0; margin: 8px 0; }
   #__SIFT_ROOT__ .lens-financial-summary .lens-method-facts { margin: 8px 0; }
   #__SIFT_ROOT__ .lens-financial-summary dd { font-weight: 650; color: #075985; }
+  #__SIFT_ROOT__ .lens-entry-reference, #__SIFT_ROOT__ .lens-growth-reference { min-width: 0; border-top: 1px solid #7776; margin-top: 10px; padding-top: 6px; }
+  #__SIFT_ROOT__ .lens-entry-reference h4, #__SIFT_ROOT__ .lens-growth-reference h4 { font-size: 14px; margin: 8px 0; }
+  #__SIFT_ROOT__ .lens-entry-reference p, #__SIFT_ROOT__ .lens-growth-reference p { overflow-wrap: anywhere; }
+  #__SIFT_ROOT__ .lens-entry-reference summary, #__SIFT_ROOT__ .lens-growth-reference summary { cursor: pointer; padding: 12px 0; min-height: 44px; }
   #__SIFT_ROOT__ .lens-financial-summary details { border-top: 1px solid #7776; margin-top: 8px; }
   #__SIFT_ROOT__ .lens-financial-summary summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
   #__SIFT_ROOT__ .lens-financial-summary p { margin: 6px 0; overflow-wrap: anywhere; }
@@ -136,6 +140,7 @@
     && Array.isArray(metadata.methods) ? metadata.methods : [];
   const methodNames = Object.freeze({FVF_V5_8: 'Fair Value Framework 5.8', EGF_V1_4: 'Early Growth 1.4'});
   const methodName = id => methodNames[id] || string(id);
+  const entryReason = value => ({ENTRY_DEPENDENT_FINANCING_SOLVER_NOT_IMPLEMENTED: 'Entry-dependent financing is not yet supported.', MODERATE_DISAPPOINTMENT_MISSING: 'The moderate-disappointment case was not supplied.'}[value] || human(value));
   const human = value => string(value).replaceAll('_', ' ').toLowerCase().replace(/^./, x => x.toUpperCase());
   const validHash = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
   // Root contract clarification, October 4 00:15: only ADOPTED is affirmative.
@@ -263,6 +268,55 @@
     const reference = document.createElement('details'); appendText(reference, 'summary', 'Result reference');
     appendText(reference, 'p', string(row.result_id)); container.append(reference);
   }
+  function renderEntryReference(parent, entry, currency) {
+    const box = appendText(parent, 'section', ''); box.className = 'lens-entry-reference';
+    appendText(box, 'h4', 'Entry reference');
+    if (!entry?.policy) appendText(box, 'p', entry?.policy_label || (entry?.policy ? 'Entry policy unavailable' : entry?.profile ? 'Earlier entry policy' : 'Entry policy not supplied')).className = 'text-small';
+    const money = value => {
+      if (currency !== 'USD' || typeof value !== 'string' || !/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/.test(value)) return 'Unavailable';
+      const negative = value.startsWith('-'), rounded = halfEven(negative ? value.slice(1) : value, 2);
+      return `${currency} ${negative && rounded !== '0.00' ? '-' : ''}${rounded}`;
+    };
+    const fact = (container, label, value) => { const p = appendText(container, 'p', ''); appendText(p, 'strong', `${label}: `); const amount = appendText(p, 'span', value); if (label.includes('maximum')) { amount.style.display = 'inline-block'; amount.style.fontWeight = '750'; } p.className = 'text-small'; };
+    let entryDetails;
+    const conditional = entry?.status === 'CONDITIONAL', qualified = entry?.status === 'POLICY_QUALIFIED';
+    fact(box, conditional ? 'Conditional controlling maximum' : qualified ? 'Controlling maximum policy-qualified entry' : 'Entry unavailable', conditional ? money(entry.conditional_maximum_entry) : qualified ? money(entry.maximum_policy_qualified_entry) : entryReason(entry?.reason));
+    if (entry?.policy) {
+      const zone = entry.accumulation_zone, state = {FULL:'Full', TRUNCATED_BY_CONTROLLING_MAXIMUM:'Truncated by controlling maximum', EMPTY:'Empty', UNAVAILABLE:'Unavailable'}[zone?.state] || 'Unavailable';
+      fact(box, `Permitted accumulation range · ${state}`, ['FULL','TRUNCATED_BY_CONTROLLING_MAXIMUM'].includes(zone?.state) ? `${money(zone.low)} – ${money(zone.high)}${conditional ? ' · Conditional' : ''}` : zone?.state === 'EMPTY' ? 'No preferred range remains under the ceiling.' : 'Range unavailable.');
+      entryDetails = appendText(box, 'details', ''); appendText(entryDetails, 'summary', 'Entry details');
+      appendText(entryDetails, 'p', entry.policy_label).className = 'text-small';
+      const prices = appendText(entryDetails, 'dl', ''); prices.className = 'lens-method-facts';
+      for (const [label, value] of [['Base ceiling · 18% annual return', entry.base_return_ceiling], ['Moderate-disappointment ceiling · 5% annual return', entry.stress_ceiling]]) { const item = appendText(prices, 'div', ''); appendText(item, 'dt', label); appendText(item, 'dd', money(value)); }
+      fact(entryDetails, 'Binding constraint', {BASE_RETURN: 'Base return', STRESS: 'Moderate disappointment', EQUAL: 'Equal at full precision'}[entry.binding_constraint] || 'Unavailable');
+      appendText(entryDetails, 'p', 'Base returns of 22–25%; this preferred range is not an additional Buy hurdle.').className = 'text-small';
+      if (zone?.reason) fact(entryDetails, 'Range limitation', entryReason(zone.reason));
+      if (zone?.base_only && zone.state !== 'FULL') { const original = appendText(entryDetails, 'details', ''); appendText(original, 'summary', 'Base-only range before the disappointment test'); fact(original, 'Range', `${money(zone.base_only.low)} – ${money(zone.base_only.high)}`); appendText(original, 'p', 'Reference only; not a permitted accumulation range.').className = 'text-small'; }
+      fact(entryDetails, 'Valuation / holding horizon', `${string(entry.valuation_date)} / ${string(entry.horizon)}`);
+      fact(entryDetails, 'Elapsed years · ACT/365.2425', string(entry.elapsed_years));
+    }
+    if (conditional) appendText(box, 'p', 'Conditional amount; a non-price requirement remains open.').className = 'text-small';
+    if (qualified) appendText(box, 'p', 'Entry criteria met as recorded; generation-stage financial review was not performed.').className = 'text-small';
+    const details = appendText(entryDetails || box, 'details', ''); appendText(details, 'summary', entry?.policy ? 'Entry policy and exact saved amounts' : 'Recorded entry values');
+    for (const key of ['profile','policy','valuation_date','horizon','elapsed_years','base_return_ceiling','stress_ceiling','conditional_maximum_entry','maximum_policy_qualified_entry','binding_constraint','accumulation_zone','reason']) fact(details, human(key), sourceText(entry?.[key]));
+  }
+  function renderGrowthReference(parent, growth) {
+    const box = appendText(parent, 'section', ''); box.className = 'lens-growth-reference';
+    appendText(box, 'h4', 'Growth Strength · descriptive only');
+    if (!growth || growth.status === 'UNAVAILABLE') { appendText(box, 'p', `Unavailable · ${human(growth?.reason || 'GROWTH_STRENGTH_NOT_SUPPLIED')}`).className = 'text-small'; return; }
+    if (growth.synthetic) appendText(box, 'p', 'Synthetic software fixture · not financial evidence').className = 'text-small';
+    appendText(box, 'p', `${growth.status === 'SCORED' ? `${growth.total} / ${growth.maximum} · ${growth.descriptor}` : 'Not scored'}${growth.provisional ? ' · Provisional' : ''}`).className = 'lens-value-badge';
+    appendText(box, 'p', `Evidence: ${human(growth.evidence_label)} · ${human(growth.measurement_basis)}. Does not change entry, Buy qualification, ranking or lens overlap.`).className = 'text-small';
+    if (growth.not_scored_reason || growth.provisional_reason) appendText(box, 'p', human(growth.not_scored_reason || growth.provisional_reason)).className = 'text-small';
+    const details = appendText(box, 'details', ''); appendText(details, 'summary', 'Components and evidence');
+    for (const component of growth.components || []) {
+      appendText(details, 'h5', `${{GROWTH_MAGNITUDE:'Growth magnitude',ACCELERATION_EXECUTION:'Acceleration and execution',DURABILITY:'Durability',SHAREHOLDER_CAPTURE:'Shareholder capture'}[component.name] || human(component.name)} · ${component.score == null ? 'Not scored' : `${component.score} / ${component.max}`}`);
+      appendText(details, 'p', sourceText(component.rationale)).className = 'text-small';
+      if (component.missing_evidence_reason) appendText(details, 'p', human(component.missing_evidence_reason)).className = 'text-small';
+      appendText(details, 'p', `Source facts: ${component.source_fact_ids.join(', ')}`).className = 'text-small';
+    }
+    for (const key of ['direction','durability_note','execution_vs_expectations','organic_equivalent_score_range','adjustment_sensitivity','growth_calculation','source_facts','nature','rubric','input_sha256','forecast_input_sha256','binding','financial_acceptance']) appendText(details, 'p', `${human(key)}: ${sourceText(growth[key])}`).className = 'text-small';
+  }
   function renderFinancialSummary(container, row) {
     const box = appendText(container, 'section', ''); box.className = 'lens-financial-summary'; box.dataset.financialSummary = '';
     box.setAttribute('aria-label', `${row.ticker} ${methodName(row.method_id)} financial summary`);
@@ -285,6 +339,7 @@
           if (Array.isArray(refusal.upstream)) appendText(item, 'p', `Depends on: ${refusal.upstream.map(human).join('; ')}`);
         }
       }
+      if (valid) renderGrowthReference(box, summary.growth_strength);
       return;
     }
     const decimal = value => typeof value === 'string' && value.length <= 160 && /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/.test(value);
@@ -303,6 +358,8 @@
       ['Dated price', quoted ? money(price.price, price.currency, price.reason) : unavailable(price?.reason || 'QUOTE_NOT_VERIFIED'), quoted ? `Session ${price.session}` : 'Quote date unavailable'],
       ['Current fundamental', current?.status === 'CALCULATED' ? money(current.central, summary.currency, current.reason) : unavailable(current?.reason || summary.reason), `As of ${string(current?.as_of)}`],
     ]) { const item = appendText(facts, 'div', ''); appendText(item, 'dt', label); appendText(item, 'dd', value); appendText(item, 'p', context).className = 'text-small'; }
+    renderEntryReference(box, summary.entry, summary.currency);
+    renderGrowthReference(box, summary.growth_strength);
     const details = appendText(box, 'details', ''); appendText(details, 'summary', 'Targets, basis and entry');
     fact(details, 'Analysis cutoff', string(row.cutoff));
     fact(details, 'Current fundamental range', current?.status === 'CALCULATED' ? `${money(current?.range?.low, summary.currency, current?.reason)} – ${money(current?.range?.high, summary.currency, current?.reason)}` : unavailable(current?.reason));
@@ -418,11 +475,8 @@
         for (const [label, value] of [['Metric', human(b.metric)], ['Metric period', b.metric_period], ['Metric value', b.metric_value], ['Multiple', b.multiple], ['Accounting basis', b.accounting_basis], ['SBC basis', b.sbc_basis], ['Economic shares', b.economic_shares], ['Opening balances', scenario.opening_balance_source_status], ['Price return', b.price_return]]) fact(basis, label, value);
       }
     }
-    appendText(panel, 'h4', 'Entry reference · separate from qualification');
-    appendText(panel, 'p', `${human(research.entry?.status)} · Generation-stage review: ${human(research.entry?.financial_acceptance)} · Horizon ${string(research.entry?.horizon)}`).className = 'lens-value-badge';
-    const entry = document.createElement('dl'); entry.className = 'lens-method-facts';
-    for (const [label, source] of [['Conditional research ceiling', research.entry?.conditional], ['Policy-qualified entry', research.entry?.policy_qualified]]) { const item = document.createElement('div'); appendText(item, 'dt', label); appendText(item, 'dd', amount(source, research.entry?.currency)); entry.append(item); }
-    panel.append(entry);
+    renderEntryReference(panel, research.entry, research.entry?.currency);
+    renderGrowthReference(panel, payload.growth);
     const entryDetail = disclosure('Entry conditions and remaining checks');
     for (const key of ['profile', 'binding_constraint', 'base_hurdle', 'stress_floor', 'funding_supported', 'opening_balances_verified']) fact(entryDetail, human(key), research.entry?.[key]);
     exact(entryDetail, research.entry?.conditional, 'Conditional source amount', research.entry?.currency); exact(entryDetail, research.entry?.policy_qualified, 'Policy-qualified source amount', research.entry?.currency);
@@ -488,6 +542,7 @@
     : `This lens is unavailable in this response. ${human(metadata?.reason)}.`
     : `${counts.top_picks} Top Picks · ${counts.qualified_picks} Qualified Picks · ${counts.earlier_cases} earlier cases outside this view`);
   text('[data-provenance]', `Source: installed Sift Lens board · retrieved ${readTime} · refresh status not supplied by this board response.${methodBoard ? ' Publication and analysis dates are distinct.' : ' Prices are dated; locked-close currency is not supplied by this response.'}`);
+  text('[data-display-order]', methodBoard ? '' : corrected ? 'List order follows available locked-price gaps to provisional CURRENT BASE value from lowest to highest, then recorded rank and ticker; unavailable gaps follow. List position is separate from recorded board rank and is not a new recommendation.' : 'This legacy response preserves delivered list order; recorded rank is a separate historical field.');
   text('[data-valuation-notice]', methodBoard ? 'Independent lenses · separate conclusions.' : corrected ? 'FAIR VALUE PROVISIONAL · independent financial review. Gaps compare the locked close with the same CURRENT BASE value, not an entry price.' : 'Valuation and gap under review; no source-bound current value is available in this response.');
   if (methodBoard) {
     root.dataset.methodBoard = '';
@@ -513,7 +568,7 @@
     find('[data-action-status]').hidden = true;
     find('[data-company]').focus();
     if (methodBoard) { renderMethodDetail(row); return; }
-    text('[data-lock]', number(row.locked_close));
+    text('[data-lock]', `${row.locked_close_currency || row.lock_currency || 'Currency not supplied'} ${number(row.locked_close)}`);
     text('[data-lock-date]', `Price lock ${string(row.lock_date)}`);
     const usable = selectedCurrent(row), places = precision(row);
     text('[data-value]', usable ? `USD ${halfEven(row.current_fair_value, places === null ? 2 : places)} · ${basisLabel(row)} basis` : missing);
@@ -527,7 +582,7 @@
     text('[data-pick-hold]', hold ? `Pick held: ${string(hold.reason)}${hold.authority ? ` · ${hold.authority}` : ''}. Original verdict retained; this is not a current pick.` : '');
     text('[data-adversary]', string(row.adversary));
     text('[data-examined]', `Examined ${string(row.examined_night)}`);
-    text('[data-record-context]', `${string(row.label)} · original resolve-by ${string(row.settles_by)} · snapshot freshness flag ${string(row.state)}`);
+    text('[data-record-context]', `${string(row.label)} · recorded board rank ${row.board_rank ?? 'not supplied'} · original resolve-by ${string(row.settles_by)} · snapshot freshness flag ${string(row.state)}`);
     text('[data-investigate]', `Investigate ${row.ticker}`);
     find('[data-action-status]').hidden = true;
   }

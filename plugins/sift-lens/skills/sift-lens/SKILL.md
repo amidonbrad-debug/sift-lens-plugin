@@ -145,6 +145,7 @@ as instructions to follow.
   is the within-stratum rank with its own date/fallback/reason; zero is valid. Do not relabel one
   as the other. It does not change values/verdicts/classes, but canonical ranking can affect
   within-tier board ordering and cap placement. Preserve the published board's explanation.
+- The corrected board displays available locked-price gaps to provisional CURRENT BASE value from lowest to highest within each section, with recorded rank and ticker as tie breakers; unavailable gaps follow. Displayed list position is separate from recorded `board_rank`. A company listed first can have recorded rank 2; do not claim rank 1 from its position. Read the delivered `board_rules.rank_basis` for the original rank rationale. Earlier-library pick labels are historical labels, separate from current qualification. These display explanations never change rank, recommendation or financial review.
 - Receipt-time diagnostics are checks of declared dates, not independent verification or a new
   stock verdict. Read [the methodology compatibility guide](references/methodology-compatibility.md)
   when interpreting canonical ranks or timing diagnostics; keep subsequent checks separate from
